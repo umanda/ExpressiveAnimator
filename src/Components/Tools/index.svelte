@@ -4,17 +4,21 @@
     import {buttons} from "./buttons";
 
     export let disabled: boolean = false;
+    export let readonly: boolean = false;
 
     function selectTool(e: MouseEvent) {
+        if (readonly) {
+            return;
+        }
         CurrentTool.change((e.target as HTMLElement).getAttribute('data-tool-name'));
     }
 </script>
 <sp-action-group vertical quiet emphasized>
     {#each buttons as button}
         {#if Array.isArray(button)}
-            <SubTools buttons={button} disabled={disabled || button.disabled} />
+            <SubTools buttons={button} disabled={disabled || button.disabled} readonly={readonly} />
         {:else}
-            <sp-action-button on:click={selectTool} title={button.title} selected={!disabled && button.tool === $CurrentTool.name} disabled={disabled || button.disabled} data-tool-name="{button.tool}">
+            <sp-action-button on:click={selectTool} title={button.title} selected={!disabled && button.tool === $CurrentTool.name} readonly={readonly} disabled={disabled || button.disabled} data-tool-name="{button.tool}">
                 <sp-icon size="s" name={button.icon} slot="icon"></sp-icon>
             </sp-action-button>
         {/if}

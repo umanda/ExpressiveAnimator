@@ -14,6 +14,7 @@
     export let details: boolean = true;
     export let loupe: boolean = false;
     export let mode: 'HEX' | 'RGB' | 'HSL' | 'HSV' = 'HEX';
+    export let readonly: boolean = false;
 
     let hsva = {h: 0, s: 0, v: 0, a: 1};
     let currentColor: TinyColor;
@@ -80,27 +81,36 @@
 </script>
 <div class="color-control">
     <div class="color-control-wheel" style={`--color-control-slider-size: ${size - 2 * 16}px;`}>
-        <SpColorWheel on:start on:done on:input={onChange} bind:value={hsva.h} step={1} size={size} loupe={loupe} small>
-            <SpColorArea on:start on:done on:input={onChange} bind:hue={hsva.h} bind:saturation={hsva.s} bind:value={hsva.v}
-                         loupe={loupe}/>
+        <SpColorWheel on:start on:end on:input={onChange} bind:value={hsva.h} step={1} size={size} loupe={loupe} small readonly={readonly}>
+            <SpColorArea on:start on:end on:input={onChange} bind:hue={hsva.h} bind:saturation={hsva.s} bind:value={hsva.v}
+                         loupe={loupe} readonly={readonly}/>
         </SpColorWheel>
-        <SpAlphaSlider on:start on:done on:input={onChange} vertical invert bind:value={hsva.a} colorTemplate={alphaTemplate} small/>
+        <SpAlphaSlider on:start on:end on:input={onChange} vertical invert bind:value={hsva.a} colorTemplate={alphaTemplate} small readonly={readonly}/>
     </div>
     {#if details}
-        <div class="color-control-details">
-            <SpTextField
-                    size="S"
-                    on:change={onColorInput}
-                    value={colorString}
-                    autocomplete="off" spellcheck={false}
-            />
-            <sp-picker value="{mode}" size="s" on:change={e => mode = e.target.value}>
-                <sp-menu-item value="HEX">HEX</sp-menu-item>
-                <sp-menu-item value="RGB">RGB</sp-menu-item>
-                <sp-menu-item value="HSV">HSV</sp-menu-item>
-                <sp-menu-item value="HSL">HSL</sp-menu-item>
-            </sp-picker>
-        </div>
+        <SpTextField
+                size="s"
+                on:change={onColorInput}
+                value={colorString}
+                readonly={readonly}
+                class="has-after flex-input"
+                wrap={true}
+        >
+            <svelte:fragment slot="after">
+                <sp-picker
+                        readonly={readonly}
+                        value="{mode}"
+                        size="s"
+                        on:change={e => mode = e.target.value}
+                        style="--spectrum-picker-width: var(--spectrum-global-dimension-size-1000);"
+                >
+                    <sp-menu-item value="HEX">HEX</sp-menu-item>
+                    <sp-menu-item value="RGB">RGB</sp-menu-item>
+                    <sp-menu-item value="HSV">HSV</sp-menu-item>
+                    <sp-menu-item value="HSL">HSL</sp-menu-item>
+                </sp-picker>
+            </svelte:fragment>
+        </SpTextField>
     {/if}
 </div>
 <style>
@@ -116,19 +126,5 @@
         align-items: center;
         justify-content: space-around;
         --spectrum-colorslider-vertical-default-length: var(--color-control-slider-size);
-    }
-
-    .color-control-details {
-        display: flex;
-        flex-direction: row;
-    }
-
-    :global(.color-control-details .spectrum-Textfield) {
-        --spectrum-textfield-border-radius: var(--spectrum-alias-border-radius-regular) 0 0 var(--spectrum-alias-border-radius-regular);
-    }
-
-    .color-control-details sp-picker {
-        --spectrum-picker-width: var(--spectrum-global-dimension-size-1000);
-        --spectrum-picker-border-radius: 0 var(--spectrum-alias-border-radius-regular) var(--spectrum-alias-border-radius-regular) 0;
     }
 </style>

@@ -17,7 +17,7 @@
 import type {ElementAnimatorMap} from "../Animator";
 import type {RegularPolygonElement} from "@zindex/canvas-engine";
 import {VectorAnimators} from "./CommonAnimators";
-import {PositiveNumberAnimation} from "./CommonAnimations";
+import {PercentAnimation, PositiveNumberAnimation} from "./CommonAnimations";
 
 export const RegularPolygonAnimators: ElementAnimatorMap<RegularPolygonElement> = {
     ...(VectorAnimators as ElementAnimatorMap<RegularPolygonElement>),
@@ -28,5 +28,11 @@ export const RegularPolygonAnimators: ElementAnimatorMap<RegularPolygonElement> 
             return new PositiveNumberAnimation();
         }
     },
-    // TODO: cornerRadius?
+    cornerRadius: {
+        id: 'polygon-corner-radius',
+        title: 'Roundness',
+        create() {
+            return new PercentAnimation();
+        }
+    },
 }

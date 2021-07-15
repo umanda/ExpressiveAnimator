@@ -20,6 +20,7 @@ import {ClipPathAnimators} from "./ClipPathAnimators";
 import {PathAnimators} from "./PathAnimators";
 import {GroupAnimators} from "./GroupAnimators";
 import {PolyAnimators} from "./PolyAnimators";
+import {LineAnimators} from "./LineAnimators";
 import {RegularPolygonAnimators} from "./RegularPolygonAnimators";
 import {StarAnimators} from "./StarAnimators";
 import {TextAnimators} from "./TextAnimators";
@@ -32,7 +33,7 @@ export * from "./CommonAnimators";
 export {
     RectAnimators, EllipseAnimators,
     ClipPathAnimators, PathAnimators,
-    GroupAnimators, PolyAnimators,
+    GroupAnimators, PolyAnimators, LineAnimators,
     RegularPolygonAnimators, StarAnimators,
     TextAnimators, SymbolAnimators, MaskAnimators,
 };
@@ -44,6 +45,7 @@ export const DefaultAnimatorsMap = {
     'path': PathAnimators,
     'group': GroupAnimators,
     'poly': PolyAnimators,
+    'line': LineAnimators,
     'regular-polygon': RegularPolygonAnimators,
     'star': StarAnimators,
     'text': TextAnimators,

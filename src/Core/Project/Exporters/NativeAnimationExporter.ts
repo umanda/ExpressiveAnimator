@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type {Exporter} from "@zindex/canvas-engine";
+import type {Exporter, LineElement} from "@zindex/canvas-engine";
 import type {AnimationProject} from "../AnimationProject";
 import {AutomaticGrid, NativeWriter, readBytes} from "@zindex/canvas-engine";
 import type {
@@ -95,7 +95,7 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
     protected getManifest(project: AnimationProject): any {
         const data: any = {
             type: 'expressive/animation',
-            version: 100,
+            version: 200,
             documents: [],
             masterDocument: project.masterDocument.id
         };
@@ -111,6 +111,7 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
         const data: any = {
             id: document.id,
             title: document.title,
+            unit: document.unit,
             guides: this.serializeGuides(document.guides),
             grid: this.serializeGrid(document.grid),
             properties: {
@@ -197,6 +198,10 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
                 data.vector = this.serializeVectorElementProperties(element as VectorElement);
                 data.star = this.serializeStarElementProperties(element as StarElement);
                 break;
+            case "line":
+                data.vector = this.serializeVectorElementProperties(element as VectorElement);
+                data.line = this.serializeLineElementProperties(element as LineElement);
+                break;
             case "symbol":
                 data.symbol = this.serializeSymbolElementProperties(element as AnimatedSymbolElement);
                 break;
@@ -271,6 +276,12 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
             radius: element.radius,
             cornerRadius: element.cornerRadius,
             angle: element.angle
+        }
+    }
+
+    protected serializeLineElementProperties(element: LineElement): any {
+        return {
+            points: element.points
         }
     }
 
@@ -392,11 +403,7 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
     }
 
     protected serializeRectShapeRadius(radius: RectShapeRadius): any {
-        return {
-            rx: radius.rx,
-            ry: radius.ry,
-            multiple: radius.multiple,
-        };
+        return radius.value;
     }
 
     protected serializeAnimation(animation: DocumentAnimation): any {

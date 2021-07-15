@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {CurrentProject, CurrentDocument, CurrentSelection, ShowTreeReverse, notifySelectionChanged} from "../Stores";
+    import {CurrentProject, CurrentDocument, CurrentSelection, ShowTreeReverse, IsPlaying, notifySelectionChanged} from "../Stores";
     import type {Element, Document, MoveElementMode, Selection} from "@zindex/canvas-engine";
     import SpTreeView from "../Controls/SpTreeView";
     import {ElementInfoMap} from "./Mapping";
@@ -78,6 +78,7 @@
                     document={$CurrentDocument}
                     selection={$CurrentSelection}
                     infoMap={ElementInfoMap}
+                    readonly={$IsPlaying}
                     on:title={onEditTitle}
                     on:drop={onDrop}
                     on:lock={onLock}
@@ -88,7 +89,7 @@
             <sp-action-button
                     title="Delete elements"
                     class="very-small"
-                    disabled={noSelection}
+                    disabled={noSelection || $IsPlaying}
                     on:click={onDelete} size="s" quiet>
                 <sp-icon slot="icon" size="s" name="workflow:Delete"></sp-icon>
             </sp-action-button>
@@ -107,7 +108,7 @@
 <!--                </sp-action-button>-->
 <!--            </sp-action-group>-->
             {#if $CurrentDocument}
-                <sp-picker size="s" value="{$CurrentDocument.id}" quiet>
+                <sp-picker readonly={$IsPlaying} size="s" value="{$CurrentDocument.id}" quiet>
                     {#each Array.from($CurrentProject.getDocuments()) as doc (doc.id)}
                         <sp-menu-item value="{doc.id}">{doc.title || '(document)'}</sp-menu-item>
                     {/each}

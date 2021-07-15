@@ -38,9 +38,9 @@ export class AnimationMiddleware extends Middleware<AnimationProject> {
 
         for (const animation of documentAnimation.allAnimations()) {
             deleted = false;
-            for (const keyframe of animation.keyframes) {
-                if (selection.isKeyframeSelected(keyframe)) {
-                    animation.removeKeyframe(keyframe);
+            for (let i = animation.keyframes.length - 1; i >= 0; i--) {
+                if (selection.isKeyframeSelected(animation.keyframes[i])) {
+                    animation.removeKeyframe(animation.keyframes[i]);
                     deleted = true;
                 }
             }

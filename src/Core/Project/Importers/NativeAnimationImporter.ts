@@ -15,29 +15,58 @@
  */
 
 import type {Importer} from "@zindex/canvas-engine";
-import {AnimationProject} from "../AnimationProject";
-import {decompress, NativeReader, readBytes, toStream} from "@zindex/canvas-engine";
-import {AnimatorSource, DocumentAnimation} from "../../Animation";
 import {
     AutomaticGrid,
+    BlendMode,
+    Brush,
+    BrushType,
     ClipPathElement,
+    Color,
+    ConicalGradientBrush,
+    decompress,
+    DefaultPen,
     Document,
     Element,
-    EllipseElement, Grid,
-    GroupElement, Guide, GuideList,
-    Orientation, PathElement, PolyElement, RectElement, RegularPolygonElement, StarElement, TextElement,
+    EllipseElement,
+    EllipseShape, EmptyBrush,
+    FillRule,
+    Font,
+    FontManager,
+    Grid,
+    GroupElement,
+    Guide,
+    GuideList,
+    LinearGradientBrush,
+    LineElement,
+    LineShape,
+    Matrix,
+    Orientation,
+    PaintOrder,
+    Path,
+    PathElement,
+    PathNode,
+    Pen,
+    Point,
+    PolyElement,
+    PolyShape,
+    RadialGradientBrush,
+    readBytes,
+    RectElement,
+    RectShape,
+    RectShapeRadius,
+    RegularPolygonElement,
+    RegularPolygonShape,
+    Size,
+    SolidBrush,
+    StarElement,
+    StarShape,
+    StopColorList,
+    TextElement,
+    toStream,
     VectorElement
 } from "@zindex/canvas-engine";
-import {
-    BlendMode, Brush, BrushType, Color, ConicalGradientBrush, DefaultPen,
-    EllipseShape,
-    FillRule, Font, FontManager, LinearGradientBrush, Matrix,
-    PaintOrder, Path, PathNode, Pen, Point,
-    PolyShape, RadialGradientBrush,
-    RectShape,
-    RectShapeRadius, RectShapeRadiusAxis, RegularPolygonShape,
-    Size, SolidBrush, StarShape, StopColorList
-} from "@zindex/canvas-engine";
+import {AnimationProject} from "../AnimationProject";
+import {AnimatorSource, DocumentAnimation} from "../../Animation";
 import {AnimationDocument} from "../AnimationDocument";
 import {AnimatedMaskElement, AnimatedSymbolElement} from "../../Elements";
 
@@ -105,9 +134,9 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
     }
 
     protected deserializeDocument(data: any): AnimationDocument {
-        // TODO: We should have specialized documents
         const document = new AnimationDocument(new Size(data.properties.size.width, data.properties.size.height), data.id);
 
+        document.unit = data.unit || 'px';
         document.title = data.title;
         document.grid = this.deserializeGrid(data.grid);
         document.guides = this.deserializeGuides(data.guides);
@@ -157,6 +186,10 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
                 break;
             case "star":
                 element = this.deserializeStarElement(document, data.id, data.properties.star);
+                isVector = true;
+                break;
+            case "line":
+                element = this.deserializeLineElement(document, data.id, data.properties.line);
                 isVector = true;
                 break;
             case "symbol":
@@ -278,6 +311,17 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
         );
     }
 
+    protected deserializeLineElement(document: Document, id: string, properties: any): LineElement {
+        return new LineElement(
+            new LineShape(
+                properties.points[0],
+                properties.points[1],
+            ),
+            document,
+            id
+        );
+    }
+
     protected deserializeStarElement(document: Document, id: string, properties: any): StarElement {
         return new StarElement(
             new StarShape(
@@ -317,6 +361,8 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
 
     protected deserializeBrush(data: any): Brush {
         switch (data.type as BrushType) {
+            case BrushType.None:
+                return EmptyBrush.INSTANCE;
             case BrushType.Solid:
                 return new SolidBrush(Color.fromCode(data.color));
             case BrushType.LinearGradient:
@@ -376,7 +422,11 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
     }
 
     protected deserializeRectShapeRadius(data: any): RectShapeRadius {
-        return new RectShapeRadius(data.rx, data.ry, data.multiple);
+        if (typeof data !== "number" && !Array.isArray(data)) {
+            // old format
+            data = data?.rx || 0;
+        }
+        return new RectShapeRadius(data);
     }
 
     protected deserializeFont(data: any): Font {

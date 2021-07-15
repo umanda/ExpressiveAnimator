@@ -3,6 +3,7 @@
 
     export let value: RadialGradientBrush;
     export let colorMode = undefined;
+    export let readonly: boolean = false;
 </script>
 <div>
     Radial gradient

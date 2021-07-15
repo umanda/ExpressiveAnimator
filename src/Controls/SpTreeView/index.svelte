@@ -14,6 +14,7 @@
     export let document: Document = null;
     export let selection: Selection<Document>;
     export let reverse: boolean = false;
+    export let readonly: boolean = false;
     export let infoMap: {
         [key: string]: {
             icon: string,
@@ -22,6 +23,9 @@
     } = null;
 
     function onTitle(e: MouseEvent) {
+        if (readonly) {
+            return;
+        }
         const id = (e.target as HTMLElement).getAttribute('data-element-id');
         if (!id) {
             return;
@@ -35,12 +39,26 @@
         dispatch('title', element);
     }
 
+    function onLock(e: CustomEvent<Element>) {
+        if (readonly) {
+            return;
+        }
+        dispatch('lock', e.detail);
+    }
+
+    function onHide(e: CustomEvent<Element>) {
+        if (readonly) {
+            return;
+        }
+        dispatch('hide', e.detail);
+    }
+
     let dragging: boolean = false;
     let moveMode: MoveElementMode = null;
     let moveTarget: string = null;
 
     function onPointerDown(e: PointerEvent) {
-        if (e.button !== MouseButton.Left) {
+        if (readonly || e.button !== MouseButton.Left) {
             return;
         }
 
@@ -60,7 +78,8 @@
     }
 
     async function onDragStart(e: DragEvent) {
-        if (!selection || selection.isEmpty) {
+        if (readonly || !selection || selection.isEmpty) {
+            e.preventDefault();
             return;
         }
 
@@ -161,8 +180,8 @@
     <ul class="spectrum-TreeView" class:is-dragged={dragging} on:dragstart={onDragStart}>
         {#each Array.from(document.children(reverse)) as child (child.id)}
             <SpTreeViewItem
-                    on:hide
-                    on:lock
+                    on:hide={onHide}
+                    on:lock={onLock}
                     on:dblclick={onTitle}
                     on:pointerdown={onPointerDown}
                     on:dragend={onDragEnd}

@@ -82,6 +82,10 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return this._endTime - this._startTime;
     }
 
+    set duration(value: number) {
+        this._endTime = this._startTime + value;
+    }
+
     get mode(): AnimationMode {
         return this._mode;
     }

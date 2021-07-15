@@ -4,22 +4,23 @@
     import TimelineSelectionRect from "./TimelineSelectionRect.svelte";
     import TimelineElementWrapper from "./TimelineElementWrapper.svelte";
     import TimelineKeyfreamesLine from "./TimelineKeyfreamesLine.svelte";
+    import type {AnimatedProperty} from "../../Stores";
     import {
-        CurrentProject,
-        CurrentTime,
-        CurrentSelection,
-        CurrentKeyframeSelection,
         CurrentAnimatedElements,
-        ShowOnlySelectedElementsAnimations,
-        notifySelectionChanged,
+        CurrentKeyframeSelection,
+        CurrentProject,
+        CurrentSelection,
+        CurrentTime,
+        CurrentTimelineFilterMode,
         notifyKeyframeSelectionChanged,
         notifyPropertiesChanged,
+        notifySelectionChanged,
+        TimelineFilterMode,
     } from "../../Stores";
-    import type {AnimatedProperty} from "../../Stores";
-    import type {Element} from "@zindex/canvas-engine";
+    import type {Element, Selection} from "@zindex/canvas-engine";
+    import {MouseButton, Point, Rectangle} from "@zindex/canvas-engine";
     import type {Animation, Keyframe} from "../../Core";
     import {getRoundedDeltaTimeByX, getXAtTime} from "./utils";
-    import {MouseButton, Point, Rectangle} from "@zindex/canvas-engine";
 
     export let zoom: number = 1;
     export let scaleFactor: number = 1;
@@ -277,9 +278,16 @@
         $CurrentProject.engine.invalidate();
     }
 
-    $: if ($ShowOnlySelectedElementsAnimations && $CurrentKeyframeSelection.deselectUnselectedElements($CurrentSelection)) {
-        notifyKeyframeSelectionChanged();
+    function checkKeyframeSelection(filterMode: TimelineFilterMode, selection: Selection<any>) {
+        if (filterMode !== TimelineFilterMode.Selected && filterMode !== TimelineFilterMode.SelectedAndAnimated) {
+            return;
+        }
+        if ($CurrentKeyframeSelection.deselectUnselectedElements(selection)) {
+            notifyKeyframeSelectionChanged();
+        }
     }
+
+    $: checkKeyframeSelection($CurrentTimelineFilterMode, $CurrentSelection);
 </script>
 <div class="timeline">
     <div bind:this={leftPane} on:scroll={onScroll} class="timeline-elements scroll scroll-invisible scroll-no-padding" hidden-x>

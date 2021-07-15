@@ -10,6 +10,7 @@
     export let value: {
         fillRule: FillRule,
     };
+    export let readonly: boolean = false;
 
     function onFillRuleChange(e) {
         dispatch('update', {property: 'fillRule', value: parseInt(e.detail)});
@@ -30,6 +31,7 @@
 </script>
 <PropertyGroup title="Fill">
     <PropertyItem title="Fill rule">
-        <IconSwitch on:change={onFillRuleChange} size="s" value={value.fillRule} items={fillRuleItems} />
+        <div style="flex: 1"></div>
+        <IconSwitch readonly={readonly} on:change={onFillRuleChange} size="s" value={value.fillRule} items={fillRuleItems} />
     </PropertyItem>
 </PropertyGroup>

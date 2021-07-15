@@ -9,11 +9,12 @@
     import PropertiesComponent from "./Components/Properties";
     import SpSplitView from "./Controls/SpSplitView.svelte";
 
-    import {CurrentTheme, CurrentProject} from "./Stores";
+    import {CurrentTheme, CurrentProject, IsPlaying} from "./Stores";
     import DialogManager from "./Components/DialogManager.svelte";
     import type {OpenDialogFunction} from "./Components/DialogType";
     import {onMount, setContext} from "svelte";
     import SettingsBar from "./Components/SettingsBar.svelte";
+    import CanvasOptions from "./Components/MenuBar/CanvasOptions.svelte";
 
     function noCtxMenu(e: Event) {
         e.preventDefault();
@@ -36,12 +37,12 @@
         <LogoComponent />
     </div>
     <div class="app-menubar" on:contextmenu={noCtxMenu}>
-        <ProjectStateComponent />
-        <div></div>
-        <AlignSelectionComponent />
+        <ProjectStateComponent readonly={$IsPlaying} />
+        <CanvasOptions />
+        <AlignSelectionComponent readonly={$IsPlaying} />
     </div>
     <div class="app-toolbar" on:contextmenu={noCtxMenu}>
-        <ToolsComponent disabled={$CurrentProject == null} />
+        <ToolsComponent readonly={$IsPlaying} disabled={$CurrentProject == null} />
         <SettingsBar disabled={true} />
     </div>
     <SpSplitView class="app-sidebar" resizable vertical primary-min="160" primary-size="75%">

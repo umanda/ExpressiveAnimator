@@ -131,8 +131,8 @@ export function isOverOrigin(element: Element, position: Point, scale: number = 
     return position.distanceTo(origin) <= OriginRadius * scale;
 }
 
-export function getElementHandle(element: Element, position: Point, scale: number = 1): Readonly<AxisPointPosition> | null {
-    return element?.globalBounds.getQuadPointPosition(position, HandleRadius * scale);
+export function getElementHandle(element: Element, position: Point, scale: number = 1, center: boolean = true): Readonly<AxisPointPosition> | null {
+    return element?.globalBounds.getQuadPointPosition(position, HandleRadius * scale, center);
 }
 
 export function drawBBoxWrapper(context: DrawingContext, box: Rectangle, dpr: number = 1): void {
@@ -160,6 +160,10 @@ export function drawElementBoundingBox(context: DrawingContext, element: Element
     }
 
     const radius = HandleRadius / scale;
+
+    context.drawCircle(box.middle, radius, SelectionPen.brush);
+    context.drawCircle(box.middle, radius, SelectionPen);
+
     for (const point of box.sidePoints()) {
         context.drawCircle(point, radius, SolidBrush.WHITE);
         context.drawCircle(point, radius, SelectionPen);

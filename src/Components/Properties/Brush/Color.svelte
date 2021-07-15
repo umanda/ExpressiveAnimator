@@ -8,6 +8,7 @@
 
     export let value: Color;
     export let colorMode = undefined;
+    export let readonly: boolean = false;
 
     let started: boolean = false;
 
@@ -29,12 +30,14 @@
 
     function onDone() {
         started = false;
-        dispatch('done');
+        dispatch('end');
     }
 
 </script>
 <ColorControl value={new TinyColor(value)}
               on:start={onStart}
-              on:done={onDone}
+              on:end={onDone}
               bind:mode={colorMode}
-              on:input={onInput}/>
+              on:input={onInput}
+              readonly={readonly}
+/>

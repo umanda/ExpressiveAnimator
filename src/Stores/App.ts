@@ -18,9 +18,19 @@ import {writable} from "svelte/store";
 
 export const IsFillSelected = writable<boolean>(true);
 export const CurrentColorMode = writable<string>('HEX');
-export const ProportionalScale = writable<boolean>(false);
+export const ProportionalScale = writable<boolean>(true);
 export const ProportionalSize = writable<boolean>(true);
 export const IsProjectSaved = writable<boolean>(false);
+export const IsPlaying = writable<boolean>(false);
 export const ProjectFileHandle = writable<FileSystemFileHandle>(null);
+export const StrokeDashPercent = writable<boolean>(true);
 
 export const ShowTreeReverse = writable<boolean>(true);
+
+export enum TimelineFilterMode {
+    AllAnimated = 0,
+    SelectedAndAnimated= 1,
+    Selected = 2,
+}
+
+export const CurrentTimelineFilterMode = writable<TimelineFilterMode>(TimelineFilterMode.AllAnimated);

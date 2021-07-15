@@ -19,12 +19,16 @@ export const ElementInfoMap: {[type: string]: ElementInfo} = {
         icon: 'expr:star-tool'
     },
     'regular-polygon': {
-        title: 'Regular polygon',
+        title: 'Polygon',
         icon: 'expr:polygon'
     },
     poly: {
         title: 'Polyline',
         icon: 'expr:polyline-tool'
+    },
+    line: {
+        title: 'Line',
+        icon: 'expr:line-tool',
     },
     path: {
         title: 'Path',
@@ -36,7 +40,7 @@ export const ElementInfoMap: {[type: string]: ElementInfo} = {
     },
     group: {
         title: 'Group',
-        icon: 'expr:group'
+        icon: 'workflow:Folder'
     },
     'clip-path': {
         title: 'Clip path',

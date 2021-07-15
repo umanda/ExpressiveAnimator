@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {ShowOnlySelectedElementsAnimations, CurrentKeyframeSelection, CurrentProject} from "../../Stores";
+    import {CurrentTimelineFilterMode,
+        CurrentKeyframeSelection, CurrentProject, TimelineFilterMode} from "../../Stores";
     import SpSlider from "../../Controls/SpSlider.svelte";
     export let zoom: number = 1;
 
@@ -19,12 +20,14 @@
 </script>
 <div class="timeline-action-bar">
     <div class="timeline-actions-left">
-        <sp-action-button
-                class="very-small"
-                on:click={() => $ShowOnlySelectedElementsAnimations = !$ShowOnlySelectedElementsAnimations}
-                selected={$ShowOnlySelectedElementsAnimations} size="s" quiet emphasized>
+        <sp-action-menu value={$CurrentTimelineFilterMode.toString()}
+                        on:change={e => $CurrentTimelineFilterMode = parseInt(e.target.value)}
+                        size="s" class="very-small">
             <sp-icon slot="icon" size="s" name="workflow:Filter"></sp-icon>
-        </sp-action-button>
+            <sp-menu-item value="{TimelineFilterMode.AllAnimated.toString()}">Animated elements</sp-menu-item>
+            <sp-menu-item value="{TimelineFilterMode.Selected.toString()}">Selected elements</sp-menu-item>
+            <sp-menu-item value="{TimelineFilterMode.SelectedAndAnimated.toString()}">Selected & Animated elements</sp-menu-item>
+        </sp-action-menu>
     </div>
     <div class="timeline-actions-right">
         <sp-action-button
@@ -35,7 +38,7 @@
             <sp-icon slot="icon" size="s" name="workflow:Delete"></sp-icon>
         </sp-action-button>
         <div class="timeline-action-bar-zoom-wrapper">
-            <SpSlider on:input={handleInput} min={0.05} max={2} step={0.01} value={zoom} fill="middle" middle={1} />
+            <SpSlider on:input={handleInput} min={0.05} max={2} step={0.01} decimals={2} value={zoom} />
         </div>
     </div>
 </div>

@@ -1,6 +1,6 @@
 <script lang="ts">
     import "@spectrum-css/colorslider/dist/index-vars.css";
-    import {getPercentValue, getXYPercent, getPercentage, clampStep, mergeClasses} from "./utils";
+    import {getPercentValue, getPercentage, clampStep, mergeClasses} from "./utils";
     import {createEventDispatcher} from "svelte";
     import SpColorHandle from "./SpColorHandle.svelte";
 
@@ -24,6 +24,7 @@
 
     export let color: string = 'transparent';
     export let gradient: string = 'transparent';
+    export let readonly: boolean = false;
 
     let surface, colorHandle, bg, percent;
 
@@ -42,10 +43,15 @@
 
     let original;
 
-    function onDragStart(_, e: PointerEvent) {
+    function onDragStart(v, e: PointerEvent) {
+        if (readonly) {
+            e.preventDefault();
+            return;
+        }
         isTouch = e.pointerType === 'pen' || e.pointerType === 'touch';
         original = value;
         dispatch('start');
+        onDrag(v);
     }
 
     function onDrag(v) {
@@ -67,7 +73,7 @@
         }
         if (isTouch) {
             isTouch = false;
-            dispatch('done');
+            dispatch('end');
         } else {
             colorHandle.blur();
         }
@@ -100,24 +106,8 @@
         }
     }
 
-    function onClick(e) {
-        let v = getXYPercent(e, surface.getBoundingClientRect())[vertical ? 'y' : 'x'];
-        v = getPercentValue(v, min, max);
-        if (invert) {
-            v = max - v;
-        }
-        v = clampStep(v, min, max, step);
-
-        if (value !== v) {
-            value = v;
-            dispatch('start');
-            dispatch('input', v);
-            dispatch('done');
-        }
-    }
-
     function onBlur() {
-        dispatch('done');
+        dispatch('end');
         dispatch('blur');
     }
 
@@ -129,7 +119,7 @@
     }, $$props.class);
 </script>
 <div {...$$restProps} class={computedClass} bind:this={surface}>
-    <div class="spectrum-ColorSlider-checkerboard" role="presentation" on:click|self={onClick}>
+    <div class="spectrum-ColorSlider-checkerboard" role="presentation">
         <div class="spectrum-ColorSlider-gradient" role="presentation" style={bg}></div>
     </div>
     <SpColorHandle bind:element={colorHandle} on:arrow={onArrow} on:focus on:blur={onBlur}

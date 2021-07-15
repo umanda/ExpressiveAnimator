@@ -4,4 +4,4 @@
     export let isWorking;
     export let closeDialog;
 </script>
-<SpTextField style="width: 100%" centerText={false} type="text" bind:value={value} />
+<SpTextField style="width: 100%; --textfield-width: 100%; --textfield-text-align: left;" bind:value={value} />

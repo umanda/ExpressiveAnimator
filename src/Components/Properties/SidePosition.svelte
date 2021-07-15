@@ -5,6 +5,7 @@
 
     export let size: number = 50;
     export let radius: number = 4;
+    export let disabled: boolean = false
 
     $: half = size / 2 - radius;
 
@@ -19,8 +20,8 @@
     }
 
 </script>
-<overlay-trigger placement="left" type="modal">
-    <sp-action-button on:click={() => dispatch('input', {x: Position.Middle, y: Position.Middle})} slot="trigger" quiet size="s">
+<overlay-trigger placement="left" type="modal" offset={-6}>
+    <sp-action-button disabled={disabled} on:click={() => dispatch('input', {x: Position.Middle, y: Position.Middle})} slot="trigger" quiet size="s">
         <sp-icon name={icon} slot="icon"></sp-icon>
     </sp-action-button>
     <sp-popover bind:this={popover} slot="longpress-content" open tip>

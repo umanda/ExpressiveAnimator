@@ -24,7 +24,7 @@ export const ClipPathAnimators: ElementAnimatorMap<ClipPathElement> = {
     ...(TransformAnimators as ElementAnimatorMap<ClipPathElement>),
     path: {
         id: 'path',
-        title: 'Clip path',
+        title: 'Clip Path',
         create() {
             return new PathAnimation();
         }

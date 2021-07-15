@@ -4,19 +4,24 @@
         CurrentProject,
         CurrentSelectedElement,
         CurrentDocument,
+        CurrentNumberUnit,
         IsFillSelected,
         CurrentColorMode,
         ProportionalScale,
         ProportionalSize,
+        StrokeDashPercent,
         CurrentTool,
+        IsPlaying,
         notifyPropertiesChanged,
     } from "../../Stores";
     import Compositing from "./Compositing.svelte";
     import FillAndStroke from "./FillAndStroke";
     import {AnimationProject, KeyframeCounter} from "../../Core";
-    import {equals, VectorElement, ShapeBuilderTool} from "@zindex/canvas-engine";
+    import {equals, VectorElement, ShapeBuilderTool, Tool} from "@zindex/canvas-engine";
     import type {Element, GlobalElementProperties} from "@zindex/canvas-engine";
     import DocumentProps from "./DocumentProps.svelte";
+    import ElementProps from "./ElementProps";
+    import {tick} from "svelte";
 
     let globalProperties: GlobalElementProperties;
     $: globalProperties = $CurrentProject.engine?.globalElementProperties;
@@ -25,80 +30,95 @@
     let started: boolean = false;
     let currentPropertyName: string = undefined;
     let currentPropertyValue: any = undefined;
+    let currentPropertyType: string = undefined;
     let initialPropertyValue: any = undefined;
+
+    type PropertyInfo = {property: string, value: any, type?: string};
 
     const debug: boolean = false;
 
+    function isSameProperty(info: PropertyInfo): boolean {
+        return currentPropertyName === info.property && currentPropertyType == info.type;
+    }
 
-    function onDone() {
+    function onEnd() {
         if (!started) {
             return;
         }
 
+        debug && console.log('stop', currentPropertyName, currentPropertyType);
+
         const engine = $CurrentProject.engine;
         if ((currentPropertyValue !== undefined && !equals(initialPropertyValue, currentPropertyValue)) || keyframeCounter.hasChanged(engine)) {
-            globalProperties.updateFromElement(engine.project.selection.activeElement);
-            engine.project.state.snapshot();
-            debug && console.log('snapshot', currentPropertyName);
+            snapshot(false);
+            debug && console.log('snapshot', currentPropertyName, currentPropertyType);
         }
-        debug && console.log('stop', currentPropertyName);
+
         started = false;
         currentPropertyName = undefined;
+        currentPropertyType = undefined;
         currentPropertyValue = undefined;
         initialPropertyValue = undefined;
     }
 
-    function onStart(e: CustomEvent<{ property: string, value: any }>) {
+    function onStart(e: CustomEvent<PropertyInfo>) {
         const engine = $CurrentProject.engine;
-        debug && console.log('start', e.detail.property, e.detail.value);
+        debug && console.log('start', e.detail);
         if (started) {
-            if (currentPropertyName !== e.detail.property) {
+            if (!isSameProperty(e.detail)) {
                 // finish current started if different property (if any)
-                onDone();
+                onEnd();
             }
         }
 
         started = true;
         currentPropertyName = e.detail.property;
+        currentPropertyType = e.detail.type;
         initialPropertyValue = e.detail.value;
         currentPropertyValue = undefined;
         keyframeCounter.start(engine);
     }
 
-    function updateProperty(property: string, value: any, snapshot?: boolean) {
+    function getElementFilter(type: string) {
+        if (!type) {
+            return null;
+        }
+        return (e: Element) => e.type === type;
+    }
+
+    function updateProperty(info: PropertyInfo, doSnapshot?: boolean) {
         const project = $CurrentProject;
-        if (project.middleware.setElementsProperty(project.selection, property as any, value)) {
-            if (snapshot) {
-                globalProperties.updateFromElement(project.selection.activeElement);
-                project.state.snapshot();
+        if (project.middleware.setElementsProperty(project.selection, info.property as any, info.value, getElementFilter(info.type))) {
+            if (doSnapshot) {
+                snapshot(false);
             } else {
                 notifyPropertiesChanged();
             }
             project.engine.invalidate();
-            debug && console.log('update', property, value);
+            debug && console.log('update', info);
             return true;
         }
         return false;
     }
 
-    function onUpdate(e: CustomEvent<{ property: string, value: any }>) {
-        if (currentPropertyName !== e.detail.property) {
-            onDone();
+    function onUpdate(e: CustomEvent<PropertyInfo>) {
+        if (!isSameProperty(e.detail)) {
+            onEnd();
         }
 
         if (!started) {
-            updateProperty(e.detail.property, e.detail.value, true);
+            updateProperty(e.detail, true);
             return;
         }
 
         if (!equals(currentPropertyValue, e.detail.value)) {
             currentPropertyValue = e.detail.value;
-            updateProperty(e.detail.property, e.detail.value, false);
+            updateProperty(e.detail, false);
         }
     }
 
     function onAction(e: CustomEvent<{ action: (project: AnimationProject, element: Element, value: any) => boolean, value?: any }>) {
-        onDone();
+        onEnd();
 
         const project = $CurrentProject;
         keyframeCounter.start(project.engine);
@@ -115,14 +135,21 @@
         }
     }
 
-    function snapshot() {
+    function snapshot(invalidate: boolean = true) {
         const project = $CurrentProject;
+        if (!project.selection.isEmpty) {
+            globalProperties.updateFromElement(project.selection.activeElement);
+        }
         project.state.snapshot();
-        project.engine?.invalidate();
+        invalidate && project.engine?.invalidate();
     }
 
-    function onGlobalPropertiesUpdate(e: CustomEvent<{ property: string, value: any }>) {
-        globalProperties.updateProperty(e.detail.property, e.detail.value);
+    function onGlobalPropertiesUpdate(e: CustomEvent<PropertyInfo>) {
+        if (e.detail.type != null) {
+            globalProperties.updateSpecificElementProperty(e.detail.type, e.detail.property, e.detail.value);
+        } else {
+            globalProperties.updateProperty(e.detail.property, e.detail.value);
+        }
         // force update
         globalProperties = globalProperties;
     }
@@ -155,48 +182,159 @@
                     globalProperties.strokeOpacity = op;
                 }
                 return;
+            case 'splitRadius':
+                const radius = globalProperties.getSpecificProperty('rect', 'radius', false);
+                globalProperties.updateSpecificElementProperty('rect', 'radius', e.detail.value ? radius.join() : radius.split());
+                // force update
+                globalProperties = globalProperties;
+                return;
         }
     }
 
-    function onDocumentProperty(e: CustomEvent<{property: string, value: any}>) {
+    function onDocumentProperty(e: CustomEvent<PropertyInfo>) {
         const document = $CurrentDocument;
-        const {property, value} = e.detail;
-        if (!document || !(property in document) || equals(document[property], value)) {
+        if (!document) {
             return;
         }
 
-        document[property] = value;
+        const {property, value, type} = e.detail;
+        const obj = type === 'animation' ? document.animation : document;
+
+        if (!(property in obj) || equals(obj[property], value)) {
+            return;
+        }
+
+        obj[property] = value;
 
         snapshot();
     }
 
-    let isShapeTool: boolean;
-    $: isShapeTool = $CurrentTool instanceof ShapeBuilderTool;
+    let isShapeTool: boolean = false;
+
+    async function checkIfShape(tool: Tool) {
+        await tick();
+        isShapeTool = tool instanceof ShapeBuilderTool;
+    }
+
+    $: checkIfShape($CurrentTool);
+
+    let tab: string = 'appearance';
+
+    function onTabChange(e: Event) {
+        const newTab = (e.target as any).selected as string;
+        if (tab === newTab || newTab === 'effects') {
+            e.preventDefault();
+            return false;
+        }
+        onEnd();
+        tab = newTab;
+        return true;
+    }
 </script>
-<div class="scroll" hidden-x>
-    {#if isShapeTool}
-        {#if globalProperties != null}
-            <FillAndStroke
-                    on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
-                    value={globalProperties}
-                    bind:showFill={$IsFillSelected}
-                    bind:colorMode={$CurrentColorMode} />
+<sp-tabs selected="{tab}" compact on:change|self={onTabChange}>
+    <sp-tab label="Appearance" value="appearance"></sp-tab>
+    <sp-tab label="Properties" value="properties"></sp-tab>
+    <sp-tab label="Effects" value="effects" disabled></sp-tab>
+    <sp-tab-panel value="appearance" class="scroll" hidden-x>
+        {#if tab === 'appearance'}
+            {#if $CurrentSelectedElement == null}
+                {#if globalProperties != null}
+                    <FillAndStroke
+                            on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
+                            value={globalProperties}
+                            unit={$CurrentNumberUnit}
+                            readonly={$IsPlaying}
+                            bind:dashesPercent={$StrokeDashPercent}
+                            bind:showFill={$IsFillSelected}
+                            bind:colorMode={$CurrentColorMode} />
+                    <Compositing on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
+                                 element={globalProperties} readonly={$IsPlaying} />
+                {/if}
+            {:else}
+                {#if $CurrentSelectedElement instanceof VectorElement}
+                    <FillAndStroke
+                            on:action={onAction} on:start={onStart} on:update={onUpdate} on:end={onEnd}
+                            value={$CurrentSelectedElement}
+                            unit={$CurrentNumberUnit}
+                            readonly={$IsPlaying}
+                            bind:dashesPercent={$StrokeDashPercent}
+                            bind:showFill={$IsFillSelected}
+                            bind:colorMode={$CurrentColorMode} />
+                {/if}
+                <Compositing on:action={onAction} on:start={onStart} on:update={onUpdate} on:end={onEnd}
+                         element={$CurrentSelectedElement} readonly={$IsPlaying} />
+            {/if}
         {/if}
-    {:else if $CurrentSelectedElement == null}
-        {#if $CurrentDocument != null}
-            <DocumentProps value={$CurrentDocument} on:update={onDocumentProperty} bind:proportionalSize={$ProportionalSize} />
+    </sp-tab-panel>
+    <sp-tab-panel value="properties" class="scroll" hidden-x>
+        {#if tab === 'properties'}
+            {#if $CurrentSelectedElement == null}
+                {#if isShapeTool}
+                    <ElementProps
+                            on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
+                            value={globalProperties.getSpecificElementProperties($CurrentTool.name)}
+                            unit={$CurrentNumberUnit}
+                            type={$CurrentTool.name}
+                            readonly={$IsPlaying}
+                    />
+                    <Transform
+                            element={null}
+                            bind:proportionalScale={$ProportionalScale}
+                            readonly={true}
+                            unit={$CurrentNumberUnit}
+                    />
+                {:else if $CurrentDocument}
+                    <DocumentProps value={$CurrentDocument} on:update={onDocumentProperty}
+                                   bind:proportionalSize={$ProportionalSize} unit={$CurrentNumberUnit}
+                                   readonly={$IsPlaying}
+                    />
+                {/if}
+            {:else}
+                {#if isShapeTool && $CurrentSelectedElement.type !== $CurrentTool.name}
+                    <ElementProps
+                            on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
+                            value={globalProperties.getSpecificElementProperties($CurrentTool.name)}
+                            unit={$CurrentNumberUnit}
+                            type={$CurrentTool.name}
+                            readonly={$IsPlaying}
+                    />
+                {:else}
+                    <ElementProps
+                            on:action={onAction} on:start={onStart} on:update={onUpdate} on:end={onEnd}
+                            unit={$CurrentNumberUnit}
+                            value={$CurrentSelectedElement}
+                            type={$CurrentSelectedElement.type}
+                            readonly={$IsPlaying}
+                    />
+                {/if}
+                <Transform on:action={onAction} on:start={onStart} on:update={onUpdate} on:end={onEnd}
+                           element={$CurrentSelectedElement}
+                           bind:proportionalScale={$ProportionalScale}
+                           readonly={$IsPlaying}
+                           unit={$CurrentNumberUnit}
+                />
+            {/if}
         {/if}
-    {:else}
-        {#if $CurrentSelectedElement instanceof VectorElement}
-            <FillAndStroke
-                    on:action={onAction} on:start={onStart} on:update={onUpdate} on:done={onDone}
-                    value={$CurrentSelectedElement}
-                    bind:showFill={$IsFillSelected}
-                    bind:colorMode={$CurrentColorMode} />
-        {/if}
-        <Transform on:action={onAction} on:start={onStart} on:update={onUpdate} on:done={onDone}
-                   element={$CurrentSelectedElement} bind:proportionalScale={$ProportionalScale}/>
-        <Compositing on:action={onAction} on:start={onStart} on:update={onUpdate} on:done={onDone}
-                     element={$CurrentSelectedElement} />
-    {/if}
-</div>
+    </sp-tab-panel>
+    <sp-tab-panel value="effects" class="scroll" hidden-x></sp-tab-panel>
+</sp-tabs>
+<style>
+    sp-tabs {
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        --spectrum-tabs-m-focus-ring-padding-x: var(--spectrum-global-dimension-size-150);
+        --spectrum-tabs-rule-color: var(--separator-color);
+    }
+    sp-tab-panel.scroll {
+        --property-group-gap: var(--spectrum-global-dimension-size-100);
+        outline: none !important;
+        flex: 1;
+        line-height: normal;
+        padding-top: var(--spectrum-global-dimension-size-200);
+        padding-bottom: var(--spectrum-global-dimension-size-200);
+    }
+    sp-tab-panel.scroll:not([selected]) {
+        display: none !important;
+    }
+</style>

@@ -17,3 +17,8 @@ Or, if you are a Yarn user
 ```shell
 yarn add @zindex/expressive-animator
 ```
+
+## Official page
+
+You can find out more about **Expressive Animator** by visiting its 
+[official page](https://www.expressivesuite.com/products/expressive-animator.html).

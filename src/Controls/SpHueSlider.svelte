@@ -8,6 +8,7 @@
     export let invert: boolean = false;
     export let disabled: boolean = false;
     export let loupe: boolean = false;
+    export let readonly: boolean = false;
 
     export let small: boolean = false;
 
@@ -17,4 +18,4 @@
                    color={`hsl(${value}, 100%, 50%)`}
                    gradient="rgb(255, 0, 0), rgb(255, 255, 0), rgb(0, 255, 0), rgb(0, 255, 255), rgb(0, 0, 255), rgb(255, 0, 255), rgb(255, 0, 0)"
                    min={0} max={360} step={step}
-                   disabled={disabled} loupe={loupe} />
+                   disabled={disabled} loupe={loupe} readonly={readonly} />

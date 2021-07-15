@@ -14,6 +14,7 @@
 
     export let value: Brush;
     export let colorMode: string = undefined;
+    export let readonly: boolean = false;
 
     let component;
 
@@ -88,11 +89,11 @@
 </script>
 
 <div class="brush-control">
-    <IconSwitch on:change={e => dispatch('change', e.detail)} value={value.type} items={items} />
+    <IconSwitch on:change={e => dispatch('change', e.detail)} value={value.type} items={items} readonly={readonly} />
 </div>
 <div class="brush-control-value">
-    <svelte:component this={component} value={value} bind:colorMode={colorMode}
-                      on:start on:done on:update on:action
+    <svelte:component this={component} value={value} bind:colorMode={colorMode} readonly={readonly}
+                      on:start on:end on:update on:action
     />
 </div>
 <style>
@@ -103,8 +104,8 @@
     }
 
     sp-action-group, .brush-control-value {
-        padding-top: var(--spectrum-global-dimension-size-75);
-        padding-bottom: var(--spectrum-global-dimension-size-75);
+        /*padding-top: var(--spectrum-global-dimension-size-75);*/
+        /*padding-bottom: var(--spectrum-global-dimension-size-75);*/
     }
 
     /*sp-action-group {*/

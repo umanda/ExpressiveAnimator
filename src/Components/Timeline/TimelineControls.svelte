@@ -1,6 +1,5 @@
 <script lang="ts">
-    // import {TimelineStore} from "../../Stores";
-    import {CurrentDocumentAnimation, CurrentTime, CurrentProject} from "../../Stores";
+    import {CurrentDocumentAnimation, CurrentTime, CurrentProject, IsPlaying} from "../../Stores";
     import {AnimationProject, DocumentAnimation} from "../../Core";
     import {formatTime} from "./utils";
 
@@ -25,6 +24,7 @@
         if (animationHandle !== null) {
             cancelAnimationFrame(animationHandle);
             animationHandle = null;
+            $IsPlaying = false;
             return;
         }
         const endTime = ($CurrentDocumentAnimation as DocumentAnimation).endTime;
@@ -35,12 +35,14 @@
             if ($CurrentTime >= endTime) {
                 $CurrentTime = endTime;
                 animationHandle = null;
+                $IsPlaying = false;
                 return;
             }
             animationStartTime = Math.round(now);
             animationHandle = requestAnimationFrame(f);
         }
         animationHandle = requestAnimationFrame(f);
+        $IsPlaying = true;
     }
 
 </script>

@@ -17,7 +17,7 @@
 import type {ToolMouseEvent} from "@zindex/canvas-engine";
 import type {CanvasEngine} from "@zindex/canvas-engine";
 import type {Element} from "@zindex/canvas-engine";
-import {Point, Rectangle} from "@zindex/canvas-engine";
+import {Point, Position, Rectangle} from "@zindex/canvas-engine";
 import {BaseTool} from "@zindex/canvas-engine";
 import {AxisPointPosition, Cursor} from "@zindex/canvas-engine";
 import {ProjectEvent} from "@zindex/canvas-engine";
@@ -57,6 +57,7 @@ export class TransformTool extends BaseTool {
     protected defaultCanvasCursor: Cursor = Cursor.PointerAlt;
     private action: Action = Action.None;
     private changed: boolean = false;
+    private moveByMiddle: boolean = false;
 
     private keyframeCounter: KeyframeCounter = new KeyframeCounter();
 
@@ -86,7 +87,7 @@ export class TransformTool extends BaseTool {
             case Action.Hover:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
                 this.drawTool(engine);
-                engine.cursor = Cursor.PointerSelectableAlt;
+                engine.cursor = this.moveByMiddle ? Cursor.PointerMoveAlt : Cursor.PointerSelectableAlt;
                 break;
             case Action.Select:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
@@ -166,6 +167,8 @@ export class TransformTool extends BaseTool {
     }
 
     onMouseHover(engine: CanvasEngine, event: ToolMouseEvent) {
+        this.moveByMiddle = false;
+
         if (engine.selection.isEmpty) {
             return this.handleHover(engine, event);
         }
@@ -191,8 +194,14 @@ export class TransformTool extends BaseTool {
 
         const handle = getElementHandle(active, event.position, lineWidth);
         if (handle) {
-            this.scalePosition = handle;
-            this.action = Action.Scale;
+            if (handle.x === Position.Middle && handle.y === Position.Middle) {
+                this.moveByMiddle = true;
+                this.action = Action.Move;
+                this.scalePosition = null;
+            } else {
+                this.scalePosition = handle;
+                this.action = Action.Scale;
+            }
             this.hoverElement = null;
             this.invalidateToolDrawing();
             return;
@@ -225,6 +234,12 @@ export class TransformTool extends BaseTool {
             this.position = event.position;
             this.snapping.init(engine);
             this.keyframeCounter.start(engine);
+            return;
+        }
+
+        // Handle middle move
+        if (this.moveByMiddle) {
+            this.position = event.position;
             return;
         }
 
@@ -348,7 +363,7 @@ export class TransformTool extends BaseTool {
 
         // TODO: handle path
 
-        if (this.action !== Action.Move) {
+        if (this.moveByMiddle || this.action !== Action.Move) {
             this.snapping.init(engine, engine.selection);
         }
 

@@ -1,7 +1,8 @@
 <script lang="ts">
     import {ProjectFileHandle, CurrentProject, CurrentProjectState, IsProjectSaved} from "../../Stores";
     import {NativeAnimationExporter, NativeAnimationImporter} from "../../Core";
-    import GlobalMenu from "./GlobalMenu.svelte";
+
+    export let readonly: boolean = false;
 
     declare global {
         interface Window {
@@ -12,6 +13,9 @@
     }
 
     function undo() {
+        if (readonly) {
+            return;
+        }
         const engine = $CurrentProject.engine;
         if (engine) {
             engine.undo();
@@ -19,6 +23,9 @@
     }
 
     function redo() {
+        if (readonly) {
+            return;
+        }
         const engine = $CurrentProject.engine;
         if (engine) {
             engine.redo();
@@ -26,6 +33,10 @@
     }
 
     async function open() {
+        if (readonly) {
+            return;
+        }
+
         if (!$IsProjectSaved) {
             // Ask user if they want to save the current project
         }
@@ -50,6 +61,9 @@
     }
 
     async function save() {
+        if (readonly) {
+            return;
+        }
         if (!$ProjectFileHandle) {
             try {
                 $ProjectFileHandle = await window.showSaveFilePicker({
@@ -78,8 +92,7 @@
 </script>
 <sp-action-group compact quiet>
 <!--    <GlobalMenu />-->
-    <sp-action-button title="Open"
-                      on:click={open}>
+    <sp-action-button title="Open" on:click={open}>
         <sp-icon size="s" name="workflow:FolderOpen" slot="icon"></sp-icon>
     </sp-action-button>
     <sp-action-button title="Save" on:click={save}>

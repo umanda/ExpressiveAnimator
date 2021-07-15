@@ -15,10 +15,10 @@
  */
 
 import {CurrentDocumentAnimation, CurrentProject, CurrentSelection} from "./Project";
+import {CurrentTimelineFilterMode, TimelineFilterMode} from "./App";
 import {derived, writable} from "svelte/store";
-import type {DocumentAnimation, Animator, Animation} from "../Core";
+import type {AnimatedProperties, Animation, Animator, AnimatorSource, DocumentAnimation} from "../Core";
 import type {Element, Selection} from "@zindex/canvas-engine";
-import type {AnimatedProperties, AnimatorSource} from "../Core";
 
 const MAX_TIME_SCALE = 1.5;
 
@@ -26,18 +26,22 @@ export const CurrentTime = writable<number>(0);
 export const CurrentMaxTime = derived([CurrentDocumentAnimation, CurrentTime],
     ([$animation, $time]) => Math.max($time, $animation ? $animation.endTime : 0) * MAX_TIME_SCALE);
 
-export const ShowOnlySelectedElementsAnimations = writable<boolean>(false);
 export const CurrentAnimatedElements = derived(
-    [CurrentProject, CurrentDocumentAnimation, CurrentSelection, ShowOnlySelectedElementsAnimations],
-    ([$project, $animation, $selection, $onlySelected]): AnimatedElement[] => {
-        if (!$animation || ($onlySelected && $selection.isEmpty)) {
+    [CurrentProject, CurrentDocumentAnimation, CurrentSelection, CurrentTimelineFilterMode],
+    ([$project, $animation, $selection, $filter]): AnimatedElement[] => {
+        if (!$animation) {
             return [];
         }
 
-        return getAnimatedElements(
-            $onlySelected ? getSelectedElementsProperties($animation, $selection) : $animation.getAnimatedElements(),
-            $project.animatorSource
-        );
+        if ($filter === TimelineFilterMode.Selected) {
+            return getAnimatedElements(getSelectedElementsProperties($animation, $selection), $project.animatorSource, true);
+        }
+
+        if ($filter === TimelineFilterMode.SelectedAndAnimated) {
+            return getAnimatedElements(getSelectedAndAnimatedElementsProperties($animation, $selection), $project.animatorSource);
+        }
+
+        return getAnimatedElements($animation.getAnimatedElements(), $project.animatorSource);
     });
 
 export type AnimatedProperty = {
@@ -51,7 +55,14 @@ export type AnimatedElement = {
     animatedProperties: AnimatedProperty[],
 }
 
+const EMPTY = {};
 function *getSelectedElementsProperties(animation: DocumentAnimation, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
+    for (const element of selection) {
+        yield [element, animation.getAnimatedProperties(element) || EMPTY];
+    }
+}
+
+function *getSelectedAndAnimatedElementsProperties(animation: DocumentAnimation, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
     for (const entry of animation.getAnimatedElements()) {
         if (selection.isSelected(entry[0])) {
             yield entry;
@@ -59,7 +70,7 @@ function *getSelectedElementsProperties(animation: DocumentAnimation, selection:
     }
 }
 
-function getAnimatedElements(elements: Iterable<[Element, AnimatedProperties<Element>]>, source: AnimatorSource): AnimatedElement[] {
+function getAnimatedElements(elements: Iterable<[Element, AnimatedProperties<Element>]>, source: AnimatorSource, allowEmpty?: boolean): AnimatedElement[] {
     const list = [];
 
     for (const [element, properties] of elements) {
@@ -77,7 +88,7 @@ function getAnimatedElements(elements: Iterable<[Element, AnimatedProperties<Ele
             });
         }
 
-        if (animatedProperties.length > 0) {
+        if (allowEmpty || animatedProperties.length > 0) {
             list.push({
                 element,
                 animatedProperties,

@@ -69,14 +69,14 @@ export const TransformAnimators: ElementAnimatorMap<Element> = {
     },
     skewAngle: {
         id: 'skew-angle',
-        title: 'Skew angle',
+        title: 'Skew Angle',
         create() {
             return new NumberAnimation();
         }
     },
     skewAxis: {
         id: 'skew-axis',
-        title: 'Skew axis',
+        title: 'Skew Axis',
         create() {
             return new NumberAnimation();
         }
@@ -93,7 +93,7 @@ export const FillAnimators: ElementAnimatorMap<VectorElement> = {
     },
     fillOpacity: {
         id: 'fill-opacity',
-        title: 'Fill opacity',
+        title: 'Fill Opacity',
         create() {
             return new OpacityAnimation();
         }
@@ -110,28 +110,28 @@ export const StrokeAnimators: ElementAnimatorMap<VectorElement> = {
     },
     strokeOpacity: {
         id: 'stroke-opacity',
-        title: 'Stroke opacity',
+        title: 'Stroke Opacity',
         create() {
             return new OpacityAnimation();
         }
     },
     strokeLineWidth: {
         id: 'stroke-width',
-        title: 'Stroke width',
+        title: 'Stroke Width',
         create() {
             return new PositiveNumberAnimation();
         }
     },
     strokeDashOffset: {
         id: 'stroke-dash-offset',
-        title: 'Dash offset',
+        title: 'Dash Offset',
         create() {
             return new NumberAnimation();
         }
     },
     strokeDashArray: {
         id: 'stroke-dash-array',
-        title: 'Dash array',
+        title: 'Dash Array',
         create() {
             return new DashArrayAnimation();
         }

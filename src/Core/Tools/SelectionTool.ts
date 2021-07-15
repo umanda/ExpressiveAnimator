@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-import type {ToolMouseEvent} from "@zindex/canvas-engine";
-import type {CanvasEngine} from "@zindex/canvas-engine";
-import type {Element} from "@zindex/canvas-engine";
-import type {Guide} from "@zindex/canvas-engine";
-import {DefaultPen, Pen, Point, Rectangle, SolidBrush} from "@zindex/canvas-engine";
-import {BaseTool} from "@zindex/canvas-engine";
-import {AxisPointPosition, Cursor, invertPosition} from "@zindex/canvas-engine";
-import {ProjectEvent} from "@zindex/canvas-engine";
+import type {CanvasEngine, Element, Guide, ToolMouseEvent} from "@zindex/canvas-engine";
+import {
+    AxisPointPosition,
+    BaseTool,
+    Cursor,
+    DefaultPen,
+    invertPosition,
+    Pen,
+    Point,
+    Position,
+    ProjectEvent,
+    Rectangle,
+    SolidBrush
+} from "@zindex/canvas-engine";
 import {
     drawBBoxWrapper,
     drawElementBoundingBox,
@@ -52,6 +58,7 @@ export class SelectionTool extends BaseTool {
     private position: Point = null;
     private hoverElement: Element | null = null;
     private resizePosition: AxisPointPosition | null = null;
+    private moveByMiddle: boolean = true;
 
     protected defaultCanvasCursor: Cursor = Cursor.Pointer;
     private action: Action = Action.None;
@@ -87,7 +94,7 @@ export class SelectionTool extends BaseTool {
             case Action.Hover:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
                 this.drawTool(engine);
-                engine.cursor = Cursor.PointerSelectable;
+                engine.cursor = this.moveByMiddle ? Cursor.PointerMove : Cursor.PointerSelectable;
                 break;
             case Action.Select:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
@@ -156,6 +163,8 @@ export class SelectionTool extends BaseTool {
     }
 
     onMouseHover(engine: CanvasEngine, event: ToolMouseEvent) {
+        this.moveByMiddle = false;
+
         const guide = getHoverGuide(engine, event.position);
 
         if (this.hoverGuide !== guide) {
@@ -173,8 +182,14 @@ export class SelectionTool extends BaseTool {
             // Copy this
             const handle = getElementHandle(engine.selection.activeElement, event.position, engine.viewBox.getLineWidth());
             if (handle) {
-                this.resizePosition = {x: handle.x, y: handle.y};
-                this.action = Action.Resize;
+                if (handle.x === Position.Middle && handle.y === Position.Middle) {
+                    this.moveByMiddle = true;
+                    this.action = Action.Move;
+                    this.resizePosition = null;
+                } else {
+                    this.resizePosition = {x: handle.x, y: handle.y};
+                    this.action = Action.Resize;
+                }
                 this.hoverElement = null;
                 this.invalidateToolDrawing();
                 return;
@@ -203,6 +218,11 @@ export class SelectionTool extends BaseTool {
         }
 
         this.changed = false;
+
+        if (this.moveByMiddle) {
+            this.position = event.position;
+            return;
+        }
 
         // Handle resize
         if (this.resizePosition != null) {
@@ -282,7 +302,7 @@ export class SelectionTool extends BaseTool {
             return;
         }
 
-        if (this.action !== Action.Move) {
+        if (this.moveByMiddle || this.action !== Action.Move) {
             this.snapping.init(engine, selection);
             this.action = Action.Move;
             this.keyframeCounter.start(engine);

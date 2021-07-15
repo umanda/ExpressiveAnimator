@@ -1,11 +1,13 @@
 <script lang="ts">
     import {StrokeLineCap, StrokeLineJoin, parseNumberList} from "@zindex/canvas-engine";
-    import {formatNumber} from "../../../Controls/utils";
+    import {formatNumber, getNumberFormatOptions} from "../../../Controls/utils";
     import PropertyGroup from "../PropertyGroup.svelte";
     import PropertyItem from "../PropertyItem.svelte";
     import SpTextField from "../../../Controls/SpTextField.svelte";
     import SpSlider from "../../../Controls/SpSlider.svelte";
     import IconSwitch from "../../../Controls/IconSwitch.svelte";
+    import SpNumberField from "../../../Controls/SpNumberField.svelte";
+    import IconToggle from "../IconToggle.svelte";
     import {createEventDispatcher} from "svelte";
 
     const dispatch = createEventDispatcher();
@@ -20,12 +22,43 @@
         readonly pathLength?: number,
     };
 
-    function formatDashArray(value: number[]) {
-        return value.map(v => formatNumber(v, 4)).join(', ');
+    export let dashesPercent: boolean = false;
+    export let unit: string = null;
+    export let readonly: boolean = false;
+
+    let isDashesPercent: boolean;
+    $: isDashesPercent = dashesPercent && (value.pathLength != null);
+
+    let dashValueScale: number;
+    $: {
+        if (isDashesPercent) {
+            dashValueScale = 100 / value.pathLength;
+        } else {
+            dashValueScale = getNumberFormatOptions(unit).mul || 1;
+        }
+    }
+
+    function formatDashArray(value: number[], scale: number, percent: boolean = false) {
+        if (!value || value.length === 0) {
+            return '';
+        }
+
+        return value
+            .map(v => formatNumber((v < 0 ? -v: v) * scale, 4))
+            .join(percent ? '%, ' : ', ') + (percent ? '%' : '');
+    }
+
+    function formatPathLength(value: number, unit: string): string {
+        if (value == null) {
+            return '-';
+        }
+        value *= (getNumberFormatOptions(unit)?.mul || 1)
+        value = Math.round(value * 10000) / 10000;
+        return value + (unit === 'px' ? '' : ' ' + unit);
     }
 
     function onDashArrayChange(e) {
-        dispatch('update', {property: 'strokeDashArray', value: parseNumberList(e.detail)});
+        dispatch('update', {property: 'strokeDashArray', value: parseNumberList(e.detail, 1 / dashValueScale)});
     }
 
     function onLineCapChange(e) {
@@ -34,10 +67,6 @@
 
     function onLineJoinChange(e) {
         dispatch('update', {property: 'strokeLineJoin', value: parseInt(e.detail)});
-    }
-
-    function onBlur() {
-        dispatch('done');
     }
 
     const lineCapItems = [
@@ -77,46 +106,64 @@
 </script>
 <PropertyGroup title="Stroke">
     <SpSlider
-            on:done
+            on:end
             on:input={e => dispatch('update', {property: 'strokeLineWidth', value: e.detail})}
             on:start={() => dispatch('start', {property: 'strokeLineWidth', value: value.strokeLineWidth})}
-            label="Width" value={value.strokeLineWidth} allowOverflow min={0} step={1} round={0.01} fill="ramp" editable />
+            label="Width" value={value.strokeLineWidth}
+            readonly={readonly}
+            allowOverflow={true} min={0} max={100} variant="ramp" format="{unit}" editable />
     <PropertyItem title="Line cap">
-        <IconSwitch on:change={onLineCapChange} size="s" value={value.strokeLineCap} items={lineCapItems} />
+        <div style="flex: 1"></div>
+        <IconSwitch on:change={onLineCapChange} size="s" value={value.strokeLineCap} items={lineCapItems} readonly={readonly} />
     </PropertyItem>
     <PropertyItem title="Line join">
-        <IconSwitch on:change={onLineJoinChange} size="s" value={value.strokeLineJoin} items={lineJoinItems} />
-    </PropertyItem>
-    <PropertyItem title="Miter limit">
-        <SpTextField
+        <SpNumberField
                 on:input={e => dispatch('update', {property: 'strokeMiterLimit', value: e.detail})}
-                on:blur={onBlur}
                 on:start={() => dispatch('start', {property: 'strokeMiterLimit', value: value.strokeMiterLimit})}
-                disabled={value.strokeLineJoin !== StrokeLineJoin.Miter} style="width: var(--small-control-size)" size="S" value={value.strokeMiterLimit} type="number"
-                min={1} max={1000} step={1} round={0.01} />
+                on:end
+                label="miter limit"
+                quiet={true}
+                readonly={readonly}
+                disabled={value.strokeLineJoin !== StrokeLineJoin.Miter}
+                value={value.strokeMiterLimit}
+                size="s"
+                min={1} max={1000} />
+        <IconSwitch on:change={onLineJoinChange} size="s" value={value.strokeLineJoin} items={lineJoinItems} readonly={readonly} />
     </PropertyItem>
-    <PropertyItem title="Dash array">
+    <PropertyItem title="Dashes">
         <SpTextField placeholder="dash, gap, ..."
+                     label="array"
+                     size="s"
+                     quiet={true}
+                     readonly={readonly}
                      on:change={onDashArrayChange}
-                     style="flex: 1; margin-left: var(--spectrum-global-dimension-size-40)"
-                     size="S"
-                     value={formatDashArray(value.strokeDashArray)} type="text" />
-    </PropertyItem>
-    <PropertyItem title="Dash offset">
-        <SpTextField title="Offset" style="width: var(--small-control-size)" size="S"
-                     on:input={e => dispatch('update', {property: 'strokeDashOffset', value: e.detail})}
-                     on:blur={onBlur}
-                     on:start={() => dispatch('start', {property: 'strokeDashOffset', value: value.strokeDashOffset})}
-                     value={value.strokeDashOffset} type="number"
-                     min={Number.NEGATIVE_INFINITY}
-                     max={Number.POSITIVE_INFINITY}
-                     step={1}
-                     round={0.01}
+                     value={formatDashArray(value.strokeDashArray, dashValueScale, isDashesPercent)} />
+        <SpNumberField
+                label="offset"
+                size="s"
+                quiet={true}
+                style="--textfield-width: var(--spectrum-global-dimension-size-750);"
+                readonly={readonly}
+                on:input={e => dispatch('update', {property: 'strokeDashOffset', value: e.detail})}
+                on:start={() => dispatch('start', {property: 'strokeDashOffset', value: value.strokeDashOffset})}
+                on:end
+                decimals={4}
+                scale={isDashesPercent ? 1 / value.pathLength : 1}
+                format={isDashesPercent ? "percent" : unit}
+                value={value.strokeDashOffset}
         />
+        <IconToggle title="Use percents" disabled={value.pathLength == null} bind:value={dashesPercent} small checkedIcon="expr:percent" uncheckedIcon="expr:percent" />
     </PropertyItem>
-    {#if 'pathLength' in value}
-        <PropertyItem title="Path length">
-            <small style="user-select: all">{(value.pathLength || 0).toFixed(2)}</small>
-        </PropertyItem>
-    {/if}
+    <PropertyItem title="Path length">
+        <div class="path-length">{formatPathLength(value.pathLength, unit)}</div>
+    </PropertyItem>
 </PropertyGroup>
+<style>
+    .path-length {
+        flex: 1;
+        text-align: right;
+        user-select: text;
+        padding-top: var(--spectrum-global-dimension-size-50);
+        font-size: var(--spectrum-global-dimension-font-size-75);
+    }
+</style>

@@ -18,7 +18,7 @@ import {
     Brush,
     BrushType,
     clamp,
-    Color,
+    Color, leastCommonMultiple,
     Path,
     PathNode,
     Point,
@@ -64,6 +64,13 @@ export function interpolatePoint(from: Point, to: Point, percent: number = 0.5):
         interpolateNumber(from.x, to.x, percent),
         interpolateNumber(from.y, to.y, percent),
     );
+}
+
+export function interpolateLine(from: [Point, Point], to: [Point, Point], percent: number = 0.5): [Point, Point] {
+    return [
+        interpolatePoint(from[0], to[0], percent),
+        interpolatePoint(from[1], to[1], percent),
+    ];
 }
 
 export function interpolatePoly(from: Point[], to: Point[], percent: number = 0.5): Point[] {
@@ -114,8 +121,32 @@ export function interpolateBrush(from: Brush, to: Brush, percent: number = 0.5):
 }
 
 export function interpolateDashArray(from: number[], to: number[], percent: number = 0.5): number[] {
-    // TODO:
-    return percent < 0.5 ? from : to;
+    if (percent <= 0) {
+        return from.slice();
+    }
+    if (percent >= 1) {
+        return to.slice();
+    }
+
+    if (from.length !== to.length) {
+        if (from.length === 0) {
+            from = (new Array(to.length)).fill(0);
+        } else if (to.length === 0) {
+            to = (new Array(from.length)).fill(0);
+        } else {
+            const l = leastCommonMultiple(from.length, to.length);
+            from = (new Array(Math.trunc(l / from.length))).fill(from).flat();
+            to = (new Array(Math.trunc(l / to.length))).fill(to).flat();
+        }
+    }
+
+    const list: number[] = [];
+    const len = from.length;
+    for (let i = 0; i < len; i++) {
+        list.push(interpolatePositiveNumber(from[i], to[i], percent));
+    }
+
+    return list;
 }
 
 export function interpolateMotion(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {
@@ -125,8 +156,29 @@ export function interpolateMotion(from: PathNode, to: PathNode, percent: number 
 }
 
 export function interpolateRectRadius(from: RectShapeRadius, to: RectShapeRadius, percent: number = 0.5): RectShapeRadius {
-    // TODO:
-    return percent < 0.5 ? from : to;
+    if (percent <= 0) {
+        return from.clone();
+    }
+
+    if (percent >= 1) {
+        return to.clone();
+    }
+
+    let f = from.value, t = to.value;
+    if (typeof from.value === "number") {
+        if (typeof to.value === "number") {
+            return new RectShapeRadius(interpolatePositiveNumber(from.value, to.value, percent));
+        }
+        f = [from.value, from.value, from.value, from.value];
+    } else if (typeof to.value === "number") {
+        t = [to.value, to.value, to.value, to.value];
+    }
+
+    const list = [];
+    for (let i = 0; i < 4; i++) {
+        list.push(interpolatePositiveNumber(f[i], t[i], percent));
+    }
+    return new RectShapeRadius(list as any)
 }
 
 export function interpolatePathNode(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {

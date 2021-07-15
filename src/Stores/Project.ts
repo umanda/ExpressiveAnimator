@@ -106,6 +106,8 @@ export const CurrentDocument = derived<Readable<AnimationProject>, AnimationDocu
     return $project ? $project.document : null;
 });
 
+export const CurrentNumberUnit = derived<Readable<AnimationDocument>, string>(CurrentDocument, $document => ($document as any)?.unit || 'px');
+
 export const CurrentDocumentAnimation = derived<[Readable<AnimationDocument>, Readable<number>], DocumentAnimation>([CurrentDocument, animationGenId], ([$document]): DocumentAnimation => {
     return $document ? $document.animation : null;
 });

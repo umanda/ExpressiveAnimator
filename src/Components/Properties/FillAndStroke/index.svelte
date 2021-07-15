@@ -11,6 +11,10 @@
 
     export let showFill: boolean = true;
     export let colorMode: string = undefined;
+    export let unit: string = undefined;
+    export let dashesPercent: boolean = true;
+    export let readonly: boolean = false;
+
     export let value: {
         // brush
         fill: Brush,
@@ -62,10 +66,18 @@
         dispatch('action', {action: e.detail.action, value: {property: brushProperty, data: e.detail.value}});
     }
 </script>
-<BrushSwitch on:start on:done on:update on:action value={value} bind:showFill />
-<BrushControl on:change={onBrushTypeChange} on:start={onStart} on:done on:update={onUpdate} on:action={onAction} value={showFill ? value.fill : value.strokeBrush} bind:colorMode />
-{#if showFill}
-    <Fill on:start on:done on:update on:action value={value} />
-{:else}
-    <Stroke on:start on:done on:update on:action value={value} />
-{/if}
+<div class="fill-stroke-brush">
+    <BrushSwitch on:start on:end on:update on:action value={value} bind:showFill readonly={readonly} />
+    <BrushControl on:change={onBrushTypeChange} on:start={onStart} on:end on:update={onUpdate} on:action={onAction}
+                  value={showFill ? value.fill : value.strokeBrush} bind:colorMode readonly={readonly} />
+</div>
+<Stroke on:start on:end on:update on:action value={value} unit={unit} dashesPercent={dashesPercent} readonly={readonly} />
+<Fill on:start on:end on:update on:action value={value} readonly={readonly} />
+<style>
+    .fill-stroke-brush {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spectrum-global-dimension-size-150);
+    }
+</style>

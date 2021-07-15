@@ -3,6 +3,8 @@
     import type {AnimationMiddleware} from "../../Core";
     import {Position} from "@zindex/canvas-engine";
 
+    export let readonly: boolean = false;
+
     let disabledAlign: boolean = false, disableDistribute: boolean = false;
 
     $: disabledAlign = !$CurrentSelection || $CurrentSelection.isEmpty;
@@ -10,6 +12,10 @@
     $: disableDistribute = true || !$CurrentSelection || $CurrentSelection.length < 3;
 
     function align(e: PointerEvent) {
+        if (readonly) {
+            return;
+        }
+
         const middleware: AnimationMiddleware = $CurrentProject?.middleware;
         if (!middleware) {
             return;
@@ -47,6 +53,9 @@
     }
 
     function distribute(e: PointerEvent) {
+        if (readonly) {
+            return;
+        }
         const middleware: AnimationMiddleware = $CurrentProject?.middleware;
         if (!middleware) {
             return;

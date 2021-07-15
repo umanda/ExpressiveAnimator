@@ -85,3 +85,9 @@ export class PolyAnimation extends Animation<Point[]> {
         super(keyframes, disabled, Interpolation.interpolatePoly);
     }
 }
+
+export class LineAnimation extends Animation<[Point, Point]> {
+    constructor(keyframes: Keyframe<[Point, Point]>[] | null = null, disabled: boolean = false) {
+        super(keyframes, disabled, Interpolation.interpolateLine);
+    }
+}

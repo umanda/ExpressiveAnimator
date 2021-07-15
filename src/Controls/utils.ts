@@ -144,6 +144,96 @@ export function getXYPercent(e: PointerEvent, bbox: DOMRect): {x: number, y: num
     };
 }
 
+export const DPI: number = 96.0;
+export const NUMBER_STYLE = {
+    'in': {
+        mul: 1 / DPI,
+        style: 'unit',
+        unit: 'inch',
+        unitDisplay: 'short',
+        useGrouping: false,
+    },
+    'mm': {
+        mul: 25.4 / DPI,
+        style: 'unit',
+        unit: 'millimeter',
+        unitDisplay: 'short',
+        useGrouping: false,
+    },
+    'cm': {
+        mul: 2.54 / DPI,
+        style: 'unit',
+        unit: 'centimeter',
+        unitDisplay: 'short',
+        useGrouping: false,
+    },
+    'deg': {
+        mul: 1,
+        style: 'unit',
+        unit: 'degree',
+        unitDisplay: 'short',
+        useGrouping: false,
+    },
+    'decimal': {
+        mul: 1,
+        style: 'decimal',
+        useGrouping: false,
+    },
+    'percent': {
+        mul: 1,
+        style: 'percent',
+        useGrouping: false,
+    },
+    "ms": {
+        mul: 1,
+        style: 'unit',
+        unit: 'millisecond',
+        unitDisplay: 'short',
+        useGrouping: false,
+    },
+}
+
+export function getNumberFormatOptions(style: string | object | null): object & {mul?: number} {
+    if (!style) {
+        return NUMBER_STYLE.decimal;
+    }
+    if (typeof style === 'string') {
+        return (style in NUMBER_STYLE) ? NUMBER_STYLE[style] : NUMBER_STYLE.decimal;
+    }
+    return style;
+}
+
+export function isInvalidNumber(value: number): boolean {
+    return isNaN(value) || !isFinite(value);
+}
+
+export function fixNumber(number: number, min: number, max: number, scale: number = 1, decimals: number = 3): number {
+    number /= scale;
+
+    if (decimals <= 0) {
+        number = Math.round(number);
+    } else {
+        const p = 10 ** decimals;
+        number = Math.round(number * p) / p;
+    }
+
+    if (min != null && number < min) {
+        return min;
+    }
+    if (max != null && number > max) {
+        return max;
+    }
+
+    return number;
+}
+
+export function getScaled(value: number, scale: number): number {
+    if (value == null || scale === 1) {
+        return value;
+    }
+    return scale * value;
+}
+
 export function dragAction(node: HTMLElement, params) {
     let surface: HTMLElement = params?.surface,
         move: ((value: {x: number, y: number}, e?: PointerEvent) => void) = params?.move,
@@ -165,29 +255,35 @@ export function dragAction(node: HTMLElement, params) {
     };
 
     const onPointerUp = (e: PointerEvent = null) => {
-        node.removeEventListener('pointermove', onPointerMove);
-        node.removeEventListener('pointerup', onPointerUp);
+        surface.removeEventListener('pointermove', onPointerMove);
+        surface.removeEventListener('pointerup', onPointerUp);
         if (e) {
-            node.releasePointerCapture(e.pointerId);
+            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
         }
 
         end && end(original.x !== last.x || original.y !== last.y, last, e);
         bbox = original = last = null;
+        node.classList.remove('is-focused');
     };
 
     const onPointerDown = (e: PointerEvent) => {
         bbox = surface.getBoundingClientRect();
         original = last = raw ? {x: e.clientX, y: e.clientY, bbox} : getXYPercent(e, bbox);
-        node.addEventListener('pointermove', onPointerMove);
-        node.addEventListener('pointerup', onPointerUp);
-        node.setPointerCapture(e.pointerId);
         start && start(original, e);
+        if (e.defaultPrevented) {
+            return;
+        }
+        surface.addEventListener('pointermove', onPointerMove);
+        surface.addEventListener('pointerup', onPointerUp);
+        node.classList.add('is-focused');
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        e.stopPropagation();
     }
 
     let added = false;
     if (surface) {
         added = true;
-        node.addEventListener('pointerdown', onPointerDown);
+        surface.addEventListener('pointerdown', onPointerDown);
     }
 
     return {
@@ -198,7 +294,7 @@ export function dragAction(node: HTMLElement, params) {
             move = params?.move;
             raw = params?.raw;
             if (surface && !added) {
-                node.addEventListener('pointerdown', onPointerDown);
+                surface.addEventListener('pointerdown', onPointerDown);
                 added = true;
             }
         },

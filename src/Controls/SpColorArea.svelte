@@ -1,6 +1,6 @@
 <script lang="ts">
     import "@spectrum-css/colorarea/dist/index-vars.css";
-    import {mergeClasses, getXYPercent} from "./utils";
+    import {mergeClasses} from "./utils";
     import {createEventDispatcher, onMount} from "svelte";
     import SpColorHandle from "./SpColorHandle.svelte";
 
@@ -12,6 +12,7 @@
 
     export let disabled: boolean = false;
     export let loupe: boolean = false;
+    export let readonly: boolean = false;
 
     const step: number = 0.01;
     let colorArea: HTMLElement, colorHandle: HTMLElement;
@@ -60,15 +61,6 @@
         return modified;
     }
 
-    function onClick(e) {
-        const value = getXYPercent(e, colorArea.getBoundingClientRect());
-        if (changeValue(value.x, value.y)) {
-            dispatch('start');
-            dispatchValue('input');
-            dispatch('done');
-        }
-    }
-
     function onArrow(e) {
         let x = 0, y = 0;
 
@@ -107,10 +99,15 @@
     let isTouch: boolean = false
     let dragging: boolean = false;
 
-    function onDragStart(_e, e: PointerEvent) {
+    function onDragStart(v, e: PointerEvent) {
+        if (readonly) {
+            e.preventDefault();
+            return;
+        }
         dragging = true;
         isTouch = e.pointerType === 'pen' || e.pointerType === 'touch';
         dispatch('start');
+        onDrag(v);
     }
 
     function onDrag({x, y}) {
@@ -126,7 +123,7 @@
         }
         if (isTouch) {
             isTouch = false;
-            dispatch('done');
+            dispatch('end');
         } else {
             colorHandle.blur();
         }
@@ -139,7 +136,7 @@
     }
     function onBlur() {
         focused = false;
-        dispatch('done');
+        dispatch('end');
         dispatch('blur');
     }
 
@@ -160,7 +157,7 @@
         'is-focused': focused,
     }, $$props.class);
 </script>
-<div {...$$restProps} class={computedClass} bind:this={colorArea} on:click|self={onClick}>
+<div {...$$restProps} class={computedClass} bind:this={colorArea}>
     <div class="spectrum-ColorArea-gradient"
          style={`background: linear-gradient(to top, black 0%, rgba(0, 0, 0, 0) 100%), linear-gradient(to right, white 0%, rgba(0, 0, 0, 0) 100%), hsl(${hue}, 100%, 50%);`}></div>
     <SpColorHandle dragOptions={dragOptions} bind:element={colorHandle} on:arrow={onArrow} on:focus={onFocus} on:blur={onBlur}

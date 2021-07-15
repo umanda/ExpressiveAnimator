@@ -15,6 +15,7 @@
     };
 
     export let showFill: boolean = true;
+    export let readonly: boolean = false;
 
     let opacityProperty: string;
     $: opacityProperty = showFill ? 'fillOpacity' : 'strokeOpacity';
@@ -73,6 +74,9 @@
     }
 
     function onCopy(e: MouseEvent) {
+        if (readonly) {
+            return;
+        }
         dispatch('action', {
             action: showFill ? copyStroke : copyFill,
             type: showFill ? 'copyStroke' : 'copyFill',
@@ -81,6 +85,9 @@
     }
 
     function onSwap(e: MouseEvent) {
+        if (readonly) {
+            return;
+        }
         dispatch('action', {
             action: swap,
             type: 'swapFillStroke',
@@ -102,14 +109,15 @@
         </div>
     </div>
     <SpSlider label={showFill ? 'Fill opacity' : 'Stroke opacity'}
-              ticks={3}
-              value={value[opacityProperty] * 100}
+              value={value[opacityProperty]}
+              readonly={readonly}
               style="flex: 1"
-              fill="start"
-              on:done
-              on:input={e => dispatch('update', {property: opacityProperty, value: e.detail / 100})}
+              min={0} max={1} step={0.01}
+              format="percent" variant="filled" editable
+              on:end
+              on:input={e => dispatch('update', {property: opacityProperty, value: e.detail})}
               on:start={() => dispatch('start', {property: opacityProperty, value: value[opacityProperty]})}
-              editable/>
+              />
 </div>
 
 <style>
@@ -125,8 +133,6 @@
         flex-direction: row;
         align-items: center;
         gap: var(--spectrum-global-dimension-size-75);
-        padding-top: var(--spectrum-global-dimension-size-75);
-        padding-bottom: var(--spectrum-global-dimension-size-75);
     }
 
     .thumbnail-wrapper {

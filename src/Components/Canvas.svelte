@@ -7,6 +7,7 @@
         CurrentTool, CurrentTheme, CurrentTime,
         CanvasEngineState, CurrentProject, CurrentDocument,
         CurrentCanvasZoom, CurrentGlobalElementProperties,
+        CurrentNumberUnit, IsPlaying,
         notifyAnimationChanged,
         notifyPropertiesChanged,
         notifyStateChanged,
@@ -19,6 +20,7 @@
 
     let canvas: CanvasEngine;
 
+    $: if (canvas) canvas.allowTool = !$IsPlaying;
     $: if (canvas) hidden ? canvas.stopRenderLoop() : canvas.startRenderLoop();
     $: if (canvas) canvas.setAttribute('theme', $CurrentTheme);
     $: if (canvas) canvas.tool = $CurrentTool;
@@ -28,7 +30,6 @@
     $: if (canvas) canvas.showGrid = $showGrid;
     $: if (canvas) canvas.showGridToBack = $showGridToBack;
     $: if (canvas) canvas.highQuality = $highQuality;
-    $: if (canvas) canvas.project = $CurrentProject;
     $: {
         if (canvas && $CurrentProject && $CurrentProject.middleware.setTime($CurrentTime)) {
             canvas.invalidate();
@@ -54,9 +55,9 @@
         canvas.project = $CurrentProject;
 
         CurrentProject.forceUpdate();
-        // CurrentProject.subscribe(p => {
-        //     canvas.project = p;
-        // });
+        return CurrentProject.subscribe(p => {
+            canvas.project = p;
+        });
     });
 
     onDestroy(() => {
@@ -127,10 +128,16 @@
         await tick();
         // TODO:
     }
+
+    async function onTreeChanged() {
+        await tick();
+        CurrentProject.forceUpdate();
+    }
 </script>
 <svelte:window on:beforeunload={beforeWindowUnload}/>
-<div class="canvas-wrapper" tabindex="0">
+<div class="canvas-wrapper">
     <canvas-engine
+            tabindex="0"
             class:hidden={hidden} bind:this={canvas}
 
             on:zoomChanged={onZoomChanged}
@@ -141,10 +148,13 @@
             on:selectionChanged={onSelectionChanged}
             on:propertyChanged={onPropertiesChanged}
             on:snapshotCreated={onSnapshotCreated}
+            on:treeChanged={onTreeChanged}
 
             on:keyframeAdded={onKeyframeAdded}
             on:keyframeSelectionChanged={onKeyframeSelectionChanged}
-    ></canvas-engine>
+    >
+        <span slot="unit">{$CurrentNumberUnit}</span>
+    </canvas-engine>
     {#if hidden}
         <slot />
     {/if}
@@ -154,10 +164,12 @@
         box-sizing: border-box;
         overflow: hidden;
         background: var(--separator-color);
+        outline: none !important;
     }
 
     canvas-engine {
         touch-action: none;
+        outline: none !important;
     }
 
     canvas-engine.hidden {

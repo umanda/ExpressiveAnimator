@@ -12,6 +12,7 @@
     export let disabled: boolean = false;
     export let loupe: boolean = false;
     export let small: boolean = false;
+    export let readonly: boolean = false;
 
     const dispatch = createEventDispatcher();
 
@@ -25,11 +26,16 @@
 
     let isTouch: boolean = false;
 
-    function onDragStart(_, e: PointerEvent) {
+    function onDragStart(v, e: PointerEvent) {
+        if (readonly) {
+            e.preventDefault();
+            return;
+        }
         isTouch = e.pointerType === 'pen' || e.pointerType === 'touch';
         dragged = true;
         original = value;
         dispatch('start');
+        onDrag(v);
     }
 
     function onDragEnd() {
@@ -39,7 +45,7 @@
         }
         if (isTouch) {
             isTouch = false;
-            dispatch('done');
+            dispatch('end');
         } else {
             colorHandle.blur();
         }
@@ -94,16 +100,6 @@
         }
     }
 
-    function onClick(e: MouseEvent) {
-        const v = clampStep(getAngle(e.clientX, e.clientY, surface.getBoundingClientRect()), 0, 360, step);
-        if (value !== v) {
-            value = v;
-            dispatch('start');
-            dispatch('input', v);
-            dispatch('done');
-        }
-    }
-
     function onFocus() {
         focused = true;
         dispatch('focus');
@@ -111,7 +107,7 @@
 
     function onBlur() {
         focused = false;
-        dispatch('done');
+        dispatch('end');
         dispatch('blur');
     }
 
@@ -135,7 +131,7 @@
     }, $$props.class);
 </script>
 <div {...$$restProps} class={computedClass} bind:this={surface} style={`--spectrum-colorwheel-width: ${size}px; --spectrum-colorwheel-height: ${size}px;`}>
-    <div on:click|self={onClick} class="spectrum-ColorWheel-gradient" style={`clip-path: path(evenodd, "${clipPath}");`}></div>
+    <div class="spectrum-ColorWheel-gradient" style={`clip-path: path(evenodd, "${clipPath}");`}></div>
     <slot />
     <SpColorHandle class="spectrum-ColorWheel-handle" tabindex="0"
                    color={`hsl(${value}, 100%, 50%)`}

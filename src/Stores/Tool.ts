@@ -23,6 +23,7 @@ import {
     EllipseTool,
     StarTool,
     PolyTool,
+    LineTool,
     RegularPolygonTool,
     ZoomTool
 } from "@zindex/canvas-engine";
@@ -35,11 +36,12 @@ export const Tools = {
     transform: new TransformTool(),
 
     // shape
-    rectangle: new RectangleTool(),
+    rect: new RectangleTool(),
     ellipse: new EllipseTool(),
     'regular-polygon': new RegularPolygonTool(),
     star: new StarTool(),
     poly: new PolyTool(),
+    line: new LineTool(),
     zoom: new ZoomTool(),
     // TODO: add other tools
 };

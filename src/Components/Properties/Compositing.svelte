@@ -1,26 +1,43 @@
 <script lang="ts">
     import PropertyGroup from "./PropertyGroup.svelte";
     import SpSlider from "../../Controls/SpSlider.svelte";
-    import type {Element} from "@zindex/canvas-engine";
-    import {BlendMode} from "@zindex/canvas-engine";
     import PropertyItem from "./PropertyItem.svelte";
+    import SwitchItem from "./SwitchItem.svelte";
+    import {BlendMode, PaintOrder} from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
 
     const dispatch = createEventDispatcher();
 
-    export let element: Element;
-
-
+    export let element: {
+        isolate: boolean,
+        blend: BlendMode,
+        opacity: number,
+        paintOrder?: PaintOrder,
+    };
+    export let readonly: boolean = false;
 </script>
 <PropertyGroup title="Compositing">
     <SpSlider
-            on:done
+            on:end
             on:start={() => dispatch('start', {property: 'opacity', value: element.opacity})}
-            on:input={e => dispatch('update', {property: 'opacity', value: e.detail / 100})}
-            label="Opacity" ticks={3} value={element.opacity * 100} fill="start" editable />
+            on:input={e => dispatch('update', {property: 'opacity', value: e.detail})}
+            label="Opacity"
+            value={element.opacity}
+            min={0} max={1} step={0.01}
+            readonly={readonly}
+            format="percent" variant="filled" editable />
+    {#if element.paintOrder != null}
+        <PropertyItem title="Order">
+            <sp-picker readonly={readonly} on:change={e => dispatch('update', {property: 'paintOrder', value: parseInt(e.target.value)})}
+                       value={element.paintOrder.toString()} style="width: 100%" size="s">
+                <sp-menu-item value={PaintOrder.FillStrokeMarkers.toString()}>Fill, Stroke</sp-menu-item>
+                <sp-menu-item value={PaintOrder.StrokeFillMarkers.toString()}>Stroke, Fill</sp-menu-item>
+            </sp-picker>
+        </PropertyItem>
+    {/if}
     <PropertyItem title="Blend">
-        <sp-picker on:change={e => dispatch('update', {property: 'blend', value: parseInt(e.target.value)})}
-                   value={element.blend.toString()} style="flex: 1" size="s">
+        <sp-picker readonly={readonly} on:change={e => dispatch('update', {property: 'blend', value: parseInt(e.target.value)})}
+                   value={element.blend.toString()} style="width: 100%" size="s">
             <sp-menu-item value={BlendMode.Normal.toString()}>Normal</sp-menu-item>
             <sp-menu-divider></sp-menu-divider>
             <sp-menu-item value={BlendMode.Color.toString()}>Color</sp-menu-item>
@@ -46,9 +63,6 @@
         </sp-picker>
     </PropertyItem>
     <PropertyItem title="Isolate">
-        <sp-switch checked={element.isolate}
-                   on:change={e => dispatch('update', {property: 'isolate', value: e.target.checked})}
-                   style="width: var(--spectrum-switch-track-width)"></sp-switch>
-        <div style="flex: 1"></div>
+        <SwitchItem on:update value={element.isolate} property="isolate" readonly={readonly} />
     </PropertyItem>
 </PropertyGroup>

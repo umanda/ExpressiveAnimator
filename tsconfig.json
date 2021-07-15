@@ -7,7 +7,6 @@
       "svelte",
       "@zindex/canvas-engine",
       "@zindex/skia-js",
-      "@zindex/serialization",
       "@ctrl/tinycolor",
       "@types/wicg-file-system-access"
     ],

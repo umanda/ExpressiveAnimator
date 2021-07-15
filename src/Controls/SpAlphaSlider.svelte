@@ -8,6 +8,7 @@
     export let vertical: boolean = false;
     export let invert: boolean = false;
     export let disabled: boolean = false;
+    export let readonly: boolean = false;
 
     export let colorTemplate: string = 'rgba(0, 0, 0, %alpha)';
 
@@ -16,8 +17,8 @@
     }
 
 </script>
-<SpColorSliderBase bind:value on:focus on:blur on:input on:change on:start on:done
+<SpColorSliderBase bind:value on:focus on:blur on:input on:change on:start on:end
                    vertical={vertical} invert={invert} small={small}
                    color={getColor(colorTemplate, value)} gradient={`${getColor(colorTemplate, 0)} 0%, ${getColor(colorTemplate, 1)} 100%`}
                    min={0} max={1} step={step} loupeCheckerboard={true}
-                   disabled={disabled} />
+                   disabled={disabled} readonly={readonly} />

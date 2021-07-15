@@ -11,9 +11,13 @@
     .property-group {
         --small-control-size: var(--spectrum-global-dimension-size-800);
     }
+    .property-group:first-child .property-title {
+        margin-top: 0;
+    }
 
     .property-title {
-        margin: var(--spectrum-global-dimension-size-150) 0;
+        margin-top: var(--spectrum-global-dimension-size-300);
+        margin-bottom: var(--spectrum-global-dimension-size-150);
         text-transform: uppercase;
         letter-spacing: 2px;
         font-weight: lighter;
@@ -22,6 +26,6 @@
     .properties {
         display: flex;
         flex-direction: column;
-        gap: var(--spectrum-global-dimension-size-75);
+        gap: var(--property-group-gap, var(--spectrum-global-dimension-size-100));
     }
 </style>

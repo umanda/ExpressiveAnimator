@@ -48,7 +48,7 @@ export const buttons: ToolButtons = [
     },
     [
         {
-            tool: 'rectangle',
+            tool: 'rect',
             icon: 'expr:rectangle-tool',
             title: 'Rectangle tool (R)'
         },
@@ -60,7 +60,7 @@ export const buttons: ToolButtons = [
         {
             tool: 'regular-polygon',
             icon: 'expr:polygon-tool',
-            title: 'Regular polygon tool (O)'
+            title: 'Polygon tool (O)'
         },
         {
             tool: 'star',
@@ -76,7 +76,6 @@ export const buttons: ToolButtons = [
             tool: 'line',
             icon: 'expr:line-tool',
             title: 'Line tool (L)',
-            disabled: true
         },
     ],
     {
