@@ -17,7 +17,7 @@
 import type {ElementAnimatorMap} from "../Animator";
 import type {StarElement} from "@zindex/canvas-engine";
 import {VectorAnimators} from "./CommonAnimators";
-import {NumberAnimation, PercentAnimation, PositiveNumberAnimation} from "./CommonAnimations";
+import {NumberAnimation, PositiveNumberAnimation} from "./CommonAnimations";
 
 export const StarAnimators: ElementAnimatorMap<StarElement> = {
     ...(VectorAnimators as ElementAnimatorMap<StarElement>),
@@ -39,14 +39,14 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         id: 'star-outer-corner-radius',
         title: 'Outer Roundness',
         create() {
-            return new PercentAnimation();
+            return new NumberAnimation();
         }
     },
     innerCornerRadius: {
-        id: 'star-outer-corner-radius',
+        id: 'star-inner-corner-radius',
         title: 'Inner Roundness',
         create() {
-            return new PercentAnimation();
+            return new NumberAnimation();
         }
     },
     outerRotate: {

@@ -29,6 +29,7 @@
         const hsv = value.toHsv();
 
         hsva.a = hsv.a;
+        hsva.v = Math.round(hsv.v * 100) / 100;
 
         if (hsv.v === 0 && hsva.v === 0 || hsv.s === 0 && hsva.s === 0) {
             return;
@@ -36,7 +37,6 @@
 
         hsva.h = Math.round(hsv.h);
         hsva.s = Math.round(hsv.s * 100) / 100;
-        hsva.v = Math.round(hsv.v * 100) / 100;
     }
 
     function onChange() {

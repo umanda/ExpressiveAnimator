@@ -18480,9 +18480,6 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
     function interpolatePositiveNumber(from, to, percent = 0.5) {
         return Math.max(0, from + percent * (to - from));
     }
-    function interpolatePercent(from, to, percent = 0.5) {
-        return canvasEngine.clamp(interpolateNumber(from, to, percent), 0, 1);
-    }
     function interpolateAlphaComponent(from, to, percent = 0.5) {
         if (from == null) {
             from = 1;
@@ -18616,11 +18613,6 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
     class NumberAnimation extends Animation {
         constructor(keyframes = null, disabled = false) {
             super(keyframes, disabled, interpolateNumber);
-        }
-    }
-    class PercentAnimation extends Animation {
-        constructor(keyframes = null, disabled = false) {
-            super(keyframes, disabled, interpolatePercent);
         }
     }
     class PointAnimation extends Animation {
@@ -18997,7 +18989,7 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
             id: 'polygon-corner-radius',
             title: 'Roundness',
             create() {
-                return new PercentAnimation();
+                return new NumberAnimation();
             }
         } });
 
@@ -19032,13 +19024,13 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
             id: 'star-outer-corner-radius',
             title: 'Outer Roundness',
             create() {
-                return new PercentAnimation();
+                return new NumberAnimation();
             }
         }, innerCornerRadius: {
-            id: 'star-outer-corner-radius',
+            id: 'star-inner-corner-radius',
             title: 'Inner Roundness',
             create() {
-                return new PercentAnimation();
+                return new NumberAnimation();
             }
         }, outerRotate: {
             id: 'star-outer-rotate',
@@ -42725,6 +42717,7 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
 
     		const hsv = value.toHsv();
     		$$invalidate(5, hsva.a = hsv.a, hsva);
+    		$$invalidate(5, hsva.v = Math.round(hsv.v * 100) / 100, hsva);
 
     		if (hsv.v === 0 && hsva.v === 0 || hsv.s === 0 && hsva.s === 0) {
     			return;
@@ -42732,7 +42725,6 @@ var(--spectrum-alias-single-line-height)))/2)}:host([vertical]):before{left:calc
 
     		$$invalidate(5, hsva.h = Math.round(hsv.h), hsva);
     		$$invalidate(5, hsva.s = Math.round(hsv.s * 100) / 100, hsva);
-    		$$invalidate(5, hsva.v = Math.round(hsv.v * 100) / 100, hsva);
     	}
 
     	function onChange() {
