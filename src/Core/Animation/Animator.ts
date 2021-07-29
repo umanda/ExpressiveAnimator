@@ -22,9 +22,10 @@ import {DefaultAnimatorsMap} from "./Animators";
 export type Animator<E extends Element, K extends WritableKeys<E>> = {
     id: string;
     title: string;
+    type?: string,
     create(): Animation<E[K]>;
     // Allow custom properties
-    [type: string]: any;
+    [key: string]: any;
 };
 
 export type ElementAnimatorMap<E extends Element> = {

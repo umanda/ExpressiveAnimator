@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import {createEventDispatcher} from "svelte";
     import SpNumberField from "../../Controls/SpNumberField.svelte";
@@ -5,9 +6,9 @@
     const dispatch = createEventDispatcher();
 
     export let value: number;
-    export let property: string;
+    export let property: string = undefined;
     export let type: string = undefined;
-    export let label: string;
+    export let label: string = '';
 
     export let min: number = undefined;
     export let max: number = undefined;

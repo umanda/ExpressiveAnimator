@@ -56,6 +56,10 @@ export const ElementInfoMap: {[type: string]: ElementInfo} = {
     },
 };
 
+export function getElementTitleByType(type: string): string {
+    return ElementInfoMap[type].title || ('(' + type + ')');
+}
+
 export function getElementTitle(element: Element): string {
     return element.title || ElementInfoMap[element.type].title || ('(' + element.type + ')');
 }

@@ -11,6 +11,21 @@
     overscroll-behavior: contain;
 }
 
+@supports (scrollbar-width: thin) {
+    .scroll {
+        scrollbar-width: thin;
+        scrollbar-color: transparent var(--scrollbar-background, transparent);
+        --scrollbar-width: 8px !important;
+    }
+    .scroll.scroll-invisible {
+        scrollbar-width: none;
+    }
+    .scroll:hover,
+    .scroll.scroll-no-hide {
+        scrollbar-color: var(--scrollbar-color, darkgray) var(--scrollbar-background, transparent);
+    }
+}
+
 .scroll::-webkit-scrollbar {
     width: var(--scrollbar-width, 8px);
     height: var(--scrollbar-width, 8px);

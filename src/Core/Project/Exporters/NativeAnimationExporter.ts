@@ -16,7 +16,7 @@
 
 import type {Exporter, LineElement} from "@zindex/canvas-engine";
 import type {AnimationProject} from "../AnimationProject";
-import {AutomaticGrid, NativeWriter, readBytes} from "@zindex/canvas-engine";
+import {AutomaticGrid, TwoPointGradientBrush} from "@zindex/canvas-engine";
 import type {
     ClipPathElement,
     Element,
@@ -334,6 +334,7 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
             case BrushType.LinearGradient:
             case BrushType.RadialGradient:
             case BrushType.ConicalGradient:
+            case BrushType.TwoPointGradient:
                 data.spread = (brush as GradientBrush).spread;
                 data.stopColors = (brush as GradientBrush).stopColors.list.map(sc => ({color: sc.color.code, offset: sc.offset}));
                 data.transform = this.serializeMatrix((brush as GradientBrush).transform);
@@ -353,6 +354,12 @@ export class NativeAnimationExporter implements Exporter<AnimationProject> {
                 data.center = (brush as ConicalGradientBrush).center;
                 data.startAngle = (brush as ConicalGradientBrush).startAngle;
                 data.endAngle = (brush as ConicalGradientBrush).endAngle;
+                break;
+            case BrushType.TwoPointGradient:
+                data.start = (brush as TwoPointGradientBrush).start;
+                data.startRadius = (brush as TwoPointGradientBrush).startRadius;
+                data.end = (brush as TwoPointGradientBrush).end;
+                data.endRadius = (brush as TwoPointGradientBrush).endRadius;
                 break;
         }
 

@@ -7,8 +7,8 @@
     const dispatch = createEventDispatcher();
 
     export let value: SolidBrush;
-    export let colorMode = undefined;
     export let readonly: boolean = false;
+    export let bounds = undefined;
 
     function onUpdate(e: CustomEvent<Color>) {
         dispatch('update', value.withColor(e.detail));
@@ -18,4 +18,4 @@
         on:update={onUpdate}
         on:start
         on:end
-        value={value.color} bind:colorMode={colorMode} readonly={readonly} />
+        value={value.color} readonly={readonly} />

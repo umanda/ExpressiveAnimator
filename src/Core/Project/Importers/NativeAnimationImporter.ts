@@ -62,7 +62,7 @@ import {
     StarShape,
     StopColorList,
     TextElement,
-    toStream,
+    toStream, TwoPointGradientBrush,
     VectorElement
 } from "@zindex/canvas-engine";
 import {AnimationProject} from "../AnimationProject";
@@ -390,6 +390,18 @@ export class NativeAnimationImporter implements Importer<AnimationProject> {
                     this.deserializePoint(data.center),
                     data.startAngle,
                     data.endAngle,
+                    new StopColorList(
+                        data.stopColors.map(sc => ({color: Color.fromCode(sc.color), offset: sc.offset}))
+                    ),
+                    data.spread,
+                    this.deserializeMatrix(data.transform)
+                );
+            case BrushType.TwoPointGradient:
+                return new TwoPointGradientBrush(
+                    this.deserializePoint(data.start),
+                    data.startRadius,
+                    this.deserializePoint(data.end),
+                    data.endRadius,
                     new StopColorList(
                         data.stopColors.map(sc => ({color: Color.fromCode(sc.color), offset: sc.offset}))
                     ),

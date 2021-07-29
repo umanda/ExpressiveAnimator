@@ -1,6 +1,6 @@
 <script lang="ts">
     import SpSlider from "../../../Controls/SpSlider.svelte";
-    import {BrushType, VectorElement} from "@zindex/canvas-engine";
+    import {BrushType, LinearGradientBrush, RadialGradientBrush, VectorElement} from "@zindex/canvas-engine";
     import type {Brush, GradientBrush, SolidBrush} from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
     import {AnimationProject} from "../../../Core";
@@ -30,14 +30,15 @@
                 picture = (value as SolidBrush).color.toString();
                 break;
             case BrushType.LinearGradient:
-                picture = `linear-gradient(${(value as GradientBrush).stopColors.toString()})`;
+                const angle = (value as LinearGradientBrush).start.getPositiveAngleTo((value as LinearGradientBrush).end) - 90;
+                picture = `linear-gradient(${angle}deg, ${(value as GradientBrush).stopColors.toString()})`;
                 break;
             case BrushType.RadialGradient:
-            case BrushType.TwoPointGradient: // same picture as radial
+            case BrushType.TwoPointGradient: // TODO: do not use the same picture as radial
                 picture = `radial-gradient(${(value as GradientBrush).stopColors.toString()})`;
                 break;
             case BrushType.ConicalGradient:
-                picture = `conic-gradient(${(value as GradientBrush).stopColors.toString()})`;
+                picture = `conic-gradient(from 90deg, ${(value as GradientBrush).stopColors.toString()})`;
                 break;
             case BrushType.Pattern:
                 picture = 'repeating-linear-gradient(transparent, #808080 20%), repeating-linear-gradient(90deg, #fff, #000 20%)';
@@ -79,7 +80,7 @@
         }
         dispatch('action', {
             action: showFill ? copyStroke : copyFill,
-            type: showFill ? 'copyStroke' : 'copyFill',
+            type: showFill ? 'copyStrokeToFill' : 'copyFillToStroke',
             value: e.altKey,
         });
     }
@@ -90,8 +91,8 @@
         }
         dispatch('action', {
             action: swap,
-            type: 'swapFillStroke',
-            value: !e.altKey
+            type: 'swapStrokeFill',
+            value: e.altKey
         });
     }
 </script>

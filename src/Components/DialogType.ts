@@ -15,7 +15,6 @@
  */
 
 import type {SvelteComponent} from "svelte";
-import {getContext} from "svelte";
 
 export type DialogAction = {
     label: string,

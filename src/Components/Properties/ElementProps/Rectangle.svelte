@@ -32,12 +32,12 @@
         return new RectShapeRadius(radius);
     }
 
-    function setRectRadiusSplit(project: AnimationProject, element: RectElement, value: boolean) {
-        if (!(element instanceof RectElement) || element.radius == null || element.radius.isSimple === value) {
+    function setRectRadiusType(project: AnimationProject, element: RectElement, split: boolean) {
+        if (!(element instanceof RectElement) || element.radius == null || element.radius.isSimple !== split) {
             return false;
         }
 
-        return project.middleware.setElementProperty(element, "radius", value ? element.radius.join() : element.radius.split());
+        return project.middleware.setElementProperty(element, "radius", split ? element.radius.split() : element.radius.join());
     }
 
     const radiusItems = [["top-left", 0], ["top-right", 1], ["bottom-left", 3], ["bottom-right", 2]];
@@ -93,7 +93,7 @@
                     quiet
                     class="very-small"
                     disabled={readonly}
-                    on:click={() => dispatch('action', {action: setRectRadiusSplit, type: 'splitRadius', value: isMultiRadius})}
+                    on:click={() => dispatch('action', {action: setRectRadiusType, type: 'setRectRadiusType', value: !isMultiRadius})}
             >
                 <sp-icon slot="icon" name="{isMultiRadius ? 'expr:radius-same' : 'expr:radius-separate'}"></sp-icon>
             </sp-action-button>

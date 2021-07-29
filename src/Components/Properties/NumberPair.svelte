@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import type {PointStruct} from "@zindex/canvas-engine";
     import SpNumberField from "../../Controls/SpNumberField.svelte";

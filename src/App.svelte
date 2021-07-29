@@ -54,7 +54,7 @@
         </svelte:fragment>
     </SpSplitView>
     <SpSplitView class="app-content" resizable vertical
-                 primary-size="80%"
+                 primary-size="75%"
                  secondary-min="0"
                  secondary-max="600">
         <svelte:fragment slot="primary">

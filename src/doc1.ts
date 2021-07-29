@@ -3,6 +3,8 @@ import {
     DefaultPen,
     FillRule,
     GroupElement,
+    LinearGradientBrush,
+    StopColorList,
     Point,
     RectElement,
     RectShape,
@@ -41,7 +43,20 @@ function defaultSampleProject(): AnimationProject {
 
     const rect = new RectElement(new RectShape(100, 100), doc);
     rect.title = 'Rect 1';
-    rect.fill = new SolidBrush(Color.parse('green'));
+    rect.fill = new LinearGradientBrush(new Point(0, 0), new Point(100, 0), new StopColorList([
+        {
+            offset: 0,
+            color: Color.parse('red')
+        },
+        {
+            offset: 0.5,
+            color: Color.parse('yellow')
+        },
+        {
+            offset: 1,
+            color: Color.parse('blue')
+        }
+    ]));
     rect.stroke = new DefaultPen(
         new SolidBrush(Color.parse('blue')),
         5

@@ -1,8 +1,6 @@
 <script lang="ts">
     import {rgbToHsv, TinyColor} from "@ctrl/tinycolor";
     import {createEventDispatcher} from "svelte";
-    import SpColorWheel from "./SpColorWheel.svelte";
-    import SpColorArea from "./SpColorArea.svelte";
     import SpAlphaSlider from "./SpAlphaSlider.svelte";
     import {parseColor} from "@zindex/canvas-engine";
     import SpTextField from "./SpTextField.svelte";
@@ -12,7 +10,6 @@
     export let value: TinyColor;
     export let size: number = 180;
     export let details: boolean = true;
-    export let loupe: boolean = false;
     export let mode: 'HEX' | 'RGB' | 'HSL' | 'HSV' = 'HEX';
     export let readonly: boolean = false;
 
@@ -20,6 +17,29 @@
     let currentColor: TinyColor;
     let alphaTemplate: string;
     let colorString: string;
+
+    function onStart() {
+        dispatch('start', value);
+    }
+
+    function onEdit(e: CustomEvent<boolean>) {
+        if (e.detail) {
+            dispatch('start', value);
+        } else {
+            dispatch('end');
+        }
+    }
+
+    function onHue(e: CustomEvent<number>) {
+        hsva.h = e.detail;
+        onChange();
+    }
+
+    function onSV(e: CustomEvent) {
+        hsva.s = e.detail.s;
+        hsva.v = e.detail.v;
+        onChange();
+    }
 
     function onColorChange(value: TinyColor) {
         if (!value) {
@@ -54,7 +74,9 @@
             hsva.h = hsv.h * 360;
             hsva.s = hsv.s;
             hsva.v = hsv.v;
+            dispatch('start');
             onChange();
+            dispatch('end');
         }
     }
 
@@ -81,11 +103,17 @@
 </script>
 <div class="color-control">
     <div class="color-control-wheel" style={`--color-control-slider-size: ${size - 2 * 16}px;`}>
-        <SpColorWheel on:start on:end on:input={onChange} bind:value={hsva.h} step={1} size={size} loupe={loupe} small readonly={readonly}>
-            <SpColorArea on:start on:end on:input={onChange} bind:hue={hsva.h} bind:saturation={hsva.s} bind:value={hsva.v}
-                         loupe={loupe} readonly={readonly}/>
-        </SpColorWheel>
-        <SpAlphaSlider on:start on:end on:input={onChange} vertical invert bind:value={hsva.a} colorTemplate={alphaTemplate} small readonly={readonly}/>
+        <sp-color-wheel on:edit={onEdit} on:input={onHue} value={hsva.h} thickness={16} readonly={readonly}>
+            <sp-color-area
+                    hue={hsva.h}
+                    x={hsva.s}
+                    y={1 - hsva.v}
+                    on:edit={onEdit}
+                    on:input={onSV}
+                    readonly={readonly}
+            ></sp-color-area>
+        </sp-color-wheel>
+        <SpAlphaSlider on:start={onStart} on:end on:update={onChange} bind:value={hsva.a} colorTemplate={alphaTemplate} readonly={readonly} small vertical invert/>
     </div>
     {#if details}
         <SpTextField
@@ -112,6 +140,7 @@
             </svelte:fragment>
         </SpTextField>
     {/if}
+    <slot />
 </div>
 <style>
     .color-control {

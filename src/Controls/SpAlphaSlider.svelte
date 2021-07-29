@@ -1,8 +1,10 @@
+<svelte:options immutable={true} />
 <script lang="ts">
-    import SpColorSliderBase from "./SpColorSliderBase.svelte";
+    import {createEventDispatcher, onDestroy} from "svelte";
+    import {blurOrCallback} from "./utils";
+    const dispatch = createEventDispatcher();
 
     export let value: number = 0;
-    export let step: number = 0.01;
     export let small: boolean = false;
 
     export let vertical: boolean = false;
@@ -12,13 +14,44 @@
 
     export let colorTemplate: string = 'rgba(0, 0, 0, %alpha)';
 
-    function getColor(template: string, alpha: number): string {
-        return template.replace('%alpha', alpha.toString());
+    let started: boolean = false;
+
+    function onInput(e: InputEvent) {
+        if (!started) {
+            started = true;
+            dispatch('start', value);
+        }
+
+        value = (e.target as {value: number}).value / 100;
+
+        dispatch('update', value);
     }
 
+    function onBlur() {
+        if (started) {
+            started = false;
+            dispatch('end');
+        }
+    }
+
+    function onPointerUp(e: PointerEvent) {
+        if (started) {
+            blurOrCallback(e.target as HTMLElement, onBlur);
+        }
+    }
+
+    onDestroy(() => onBlur());
 </script>
-<SpColorSliderBase bind:value on:focus on:blur on:input on:change on:start on:end
-                   vertical={vertical} invert={invert} small={small}
-                   color={getColor(colorTemplate, value)} gradient={`${getColor(colorTemplate, 0)} 0%, ${getColor(colorTemplate, 1)} 100%`}
-                   min={0} max={1} step={step} loupeCheckerboard={true}
-                   disabled={disabled} readonly={readonly} />
+<sp-alpha-slider
+        on:input={onInput}
+        on:blur={onBlur}
+        on:pointerup={onPointerUp}
+        template={colorTemplate}
+        vertical={vertical}
+        invert={invert}
+        value={value * 100}
+        disabled={disabled}
+        readonly={readonly}
+        small={small ? '' : undefined}
+        label="Alpha"
+></sp-alpha-slider>

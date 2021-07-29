@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import {createEventDispatcher, onDestroy, onMount, tick} from "svelte";
     import type {Textfield} from "@spectrum-web-components/textfield";
@@ -21,7 +22,7 @@
     export let minlength: number = undefined;
     export let maxlength: number = undefined;
     export let pattern: string = undefined;
-    export let placeholder: string = undefined;
+    export let placeholder: string = '';
 
     let input: Textfield = undefined;
     let focused: boolean = false;

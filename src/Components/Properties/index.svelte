@@ -6,207 +6,59 @@
         CurrentDocument,
         CurrentNumberUnit,
         IsFillSelected,
-        CurrentColorMode,
         ProportionalScale,
         ProportionalSize,
         StrokeDashPercent,
         CurrentTool,
         IsPlaying,
-        notifyPropertiesChanged,
     } from "../../Stores";
     import Compositing from "./Compositing.svelte";
     import FillAndStroke from "./FillAndStroke";
-    import {AnimationProject, KeyframeCounter} from "../../Core";
-    import {equals, VectorElement, ShapeBuilderTool, Tool} from "@zindex/canvas-engine";
-    import type {Element, GlobalElementProperties} from "@zindex/canvas-engine";
+    import {VectorElement, ShapeBuilderTool, Tool} from "@zindex/canvas-engine";
+    import type {GlobalElementProperties} from "@zindex/canvas-engine";
     import DocumentProps from "./DocumentProps.svelte";
     import ElementProps from "./ElementProps";
-    import {tick} from "svelte";
+    import {onDestroy, tick} from "svelte";
+    import {PropertyUpdater} from "./PropertyUpdater";
+    import type {ActionInfo, PropertyInfo} from "./PropertyUpdater";
 
     let globalProperties: GlobalElementProperties;
     $: globalProperties = $CurrentProject.engine?.globalElementProperties;
 
-    const keyframeCounter = new KeyframeCounter();
-    let started: boolean = false;
-    let currentPropertyName: string = undefined;
-    let currentPropertyValue: any = undefined;
-    let currentPropertyType: string = undefined;
-    let initialPropertyValue: any = undefined;
-
-    type PropertyInfo = {property: string, value: any, type?: string};
-
-    const debug: boolean = false;
-
-    function isSameProperty(info: PropertyInfo): boolean {
-        return currentPropertyName === info.property && currentPropertyType == info.type;
-    }
+    const updater = new PropertyUpdater();
+    onDestroy(() => updater.dispose());
 
     function onEnd() {
-        if (!started) {
-            return;
-        }
-
-        debug && console.log('stop', currentPropertyName, currentPropertyType);
-
-        const engine = $CurrentProject.engine;
-        if ((currentPropertyValue !== undefined && !equals(initialPropertyValue, currentPropertyValue)) || keyframeCounter.hasChanged(engine)) {
-            snapshot(false);
-            debug && console.log('snapshot', currentPropertyName, currentPropertyType);
-        }
-
-        started = false;
-        currentPropertyName = undefined;
-        currentPropertyType = undefined;
-        currentPropertyValue = undefined;
-        initialPropertyValue = undefined;
+        updater.endUpdate();
     }
 
     function onStart(e: CustomEvent<PropertyInfo>) {
-        const engine = $CurrentProject.engine;
-        debug && console.log('start', e.detail);
-        if (started) {
-            if (!isSameProperty(e.detail)) {
-                // finish current started if different property (if any)
-                onEnd();
-            }
-        }
-
-        started = true;
-        currentPropertyName = e.detail.property;
-        currentPropertyType = e.detail.type;
-        initialPropertyValue = e.detail.value;
-        currentPropertyValue = undefined;
-        keyframeCounter.start(engine);
-    }
-
-    function getElementFilter(type: string) {
-        if (!type) {
-            return null;
-        }
-        return (e: Element) => e.type === type;
-    }
-
-    function updateProperty(info: PropertyInfo, doSnapshot?: boolean) {
-        const project = $CurrentProject;
-        if (project.middleware.setElementsProperty(project.selection, info.property as any, info.value, getElementFilter(info.type))) {
-            if (doSnapshot) {
-                snapshot(false);
-            } else {
-                notifyPropertiesChanged();
-            }
-            project.engine.invalidate();
-            debug && console.log('update', info);
-            return true;
-        }
-        return false;
+        updater.startUpdate(e.detail);
     }
 
     function onUpdate(e: CustomEvent<PropertyInfo>) {
-        if (!isSameProperty(e.detail)) {
-            onEnd();
-        }
-
-        if (!started) {
-            updateProperty(e.detail, true);
-            return;
-        }
-
-        if (!equals(currentPropertyValue, e.detail.value)) {
-            currentPropertyValue = e.detail.value;
-            updateProperty(e.detail, false);
-        }
+        updater.update(e.detail);
     }
 
-    function onAction(e: CustomEvent<{ action: (project: AnimationProject, element: Element, value: any) => boolean, value?: any }>) {
-        onEnd();
-
-        const project = $CurrentProject;
-        keyframeCounter.start(project.engine);
-        let changed: boolean = false;
-
-        for (const element of project.selection) {
-            if (e.detail.action(project, element, e.detail.value)) {
-                changed = true;
-            }
-        }
-
-        if (changed || keyframeCounter.hasChanged(project.engine)) {
-            snapshot();
-        }
-    }
-
-    function snapshot(invalidate: boolean = true) {
-        const project = $CurrentProject;
-        if (!project.selection.isEmpty) {
-            globalProperties.updateFromElement(project.selection.activeElement);
-        }
-        project.state.snapshot();
-        invalidate && project.engine?.invalidate();
+    function onAction(e: CustomEvent<ActionInfo>) {
+        updater.callAction(e.detail);
     }
 
     function onGlobalPropertiesUpdate(e: CustomEvent<PropertyInfo>) {
-        if (e.detail.type != null) {
-            globalProperties.updateSpecificElementProperty(e.detail.type, e.detail.property, e.detail.value);
-        } else {
-            globalProperties.updateProperty(e.detail.property, e.detail.value);
-        }
+        updater.updateGlobalProperty(e.detail);
         // force update
         globalProperties = globalProperties;
     }
 
-    function onGlobalPropertiesAction(e: CustomEvent<{ action: any, type?: string, value?: any }>) {
-        if (!e.detail.type) {
-            return;
-        }
-
-        switch (e.detail.type) {
-            case 'copyFill':
-                globalProperties.strokeBrush = globalProperties.fill;
-                if (!e.detail.value) {
-                    globalProperties.strokeOpacity = globalProperties.fillOpacity;
-                }
-                return;
-            case 'copyStroke':
-                globalProperties.fill = globalProperties.strokeBrush;
-                if (!e.detail.value) {
-                    globalProperties.fillOpacity = globalProperties.strokeOpacity;
-                }
-                return;
-            case 'swapFillStroke':
-                const fill = globalProperties.fill;
-                globalProperties.fill = globalProperties.strokeBrush;
-                globalProperties.strokeBrush = fill;
-                if (e.detail.value) {
-                    const op = globalProperties.fillOpacity;
-                    globalProperties.fillOpacity = globalProperties.strokeOpacity;
-                    globalProperties.strokeOpacity = op;
-                }
-                return;
-            case 'splitRadius':
-                const radius = globalProperties.getSpecificProperty('rect', 'radius', false);
-                globalProperties.updateSpecificElementProperty('rect', 'radius', e.detail.value ? radius.join() : radius.split());
-                // force update
-                globalProperties = globalProperties;
-                return;
+    function onGlobalPropertiesAction(e: CustomEvent<{type: string, value: any}>) {
+        if (updater.callGlobalElementAction(e.detail)) {
+            // force update
+            globalProperties = globalProperties;
         }
     }
 
     function onDocumentProperty(e: CustomEvent<PropertyInfo>) {
-        const document = $CurrentDocument;
-        if (!document) {
-            return;
-        }
-
-        const {property, value, type} = e.detail;
-        const obj = type === 'animation' ? document.animation : document;
-
-        if (!(property in obj) || equals(obj[property], value)) {
-            return;
-        }
-
-        obj[property] = value;
-
-        snapshot();
+        updater.updateDocumentProperty(e.detail);
     }
 
     let isShapeTool: boolean = false;
@@ -246,7 +98,7 @@
                             readonly={$IsPlaying}
                             bind:dashesPercent={$StrokeDashPercent}
                             bind:showFill={$IsFillSelected}
-                            bind:colorMode={$CurrentColorMode} />
+                    />
                     <Compositing on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
                                  element={globalProperties} readonly={$IsPlaying} />
                 {/if}
@@ -259,7 +111,7 @@
                             readonly={$IsPlaying}
                             bind:dashesPercent={$StrokeDashPercent}
                             bind:showFill={$IsFillSelected}
-                            bind:colorMode={$CurrentColorMode} />
+                    />
                 {/if}
                 <Compositing on:action={onAction} on:start={onStart} on:update={onUpdate} on:end={onEnd}
                          element={$CurrentSelectedElement} readonly={$IsPlaying} />

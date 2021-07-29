@@ -2,6 +2,9 @@ import "./spectrum";
 import "./style.css";
 import "./scroll.css";
 
+// extra spectrum controls
+import "./SpectrumExtra";
+
 import {loadIconSet} from "./LoadIcons";
 import App from './App.svelte';
 
@@ -17,7 +20,6 @@ import {CanvasEngineInit} from "@zindex/canvas-engine";
 import {CurrentProject} from "./Stores";
 import {getSampleProject} from "./doc1";
 import {patchSpectrum} from "./patchSpectrum";
-import {AnimationProject} from "./Core";
 
 export default LoadApp();
 

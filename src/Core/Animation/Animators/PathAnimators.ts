@@ -24,6 +24,7 @@ export const PathAnimators: ElementAnimatorMap<PathElement> = {
     path: {
         id: 'path',
         title: 'Path',
+        type: 'path',
         create() {
             return new PathAnimation();
         }

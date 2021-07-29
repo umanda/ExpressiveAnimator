@@ -1,6 +1,7 @@
 <script lang="ts">
     import {createEventDispatcher} from "svelte";
-    import {Brush, BrushType} from "@zindex/canvas-engine";
+    import type {Brush, Rectangle} from "@zindex/canvas-engine";
+    import {BrushType} from "@zindex/canvas-engine";
     import BrushEmpty from "./BrushEmpty.svelte";
     import BrushSolid from "./BrushSolid.svelte";
     import BrushPattern from "./BrushPattern.svelte";
@@ -13,8 +14,8 @@
     const dispatch = createEventDispatcher();
 
     export let value: Brush;
-    export let colorMode: string = undefined;
     export let readonly: boolean = false;
+    export let bounds: Rectangle = null;
 
     let component;
 
@@ -58,33 +59,31 @@
         {
             value: BrushType.LinearGradient,
             title: 'Linear gradient',
-            icon: 'expr:fill-linear-gradient',
-            disabled: true
+            icon: 'expr:fill-linear-gradient'
         },
         {
             value: BrushType.RadialGradient,
             title: 'Radial gradient',
             icon: 'expr:fill-radial-gradient',
-            disabled: true
         },
         {
             value: BrushType.TwoPointGradient,
             title: 'Radial gradient with focal point',
             icon: 'expr:fill-radial-focal-gradient',
-            disabled: true
         },
         {
             value: BrushType.ConicalGradient,
             title: 'Sweep gradient',
             icon: 'expr:fill-conical-gradient',
-            disabled: true
         },
+        /*
         {
             value: BrushType.Pattern,
             title: 'Pattern',
             icon: 'expr:fill-pattern',
             disabled: true
         },
+         */
     ];
 </script>
 
@@ -92,9 +91,8 @@
     <IconSwitch on:change={e => dispatch('change', e.detail)} value={value.type} items={items} readonly={readonly} />
 </div>
 <div class="brush-control-value">
-    <svelte:component this={component} value={value} bind:colorMode={colorMode} readonly={readonly}
-                      on:start on:end on:update on:action
-    />
+    <svelte:component this={component} value={value} bounds={bounds} readonly={readonly}
+                      on:start on:end on:update on:action/>
 </div>
 <style>
     .brush-control {
@@ -102,15 +100,4 @@
         flex-direction: row;
         justify-content: center;
     }
-
-    sp-action-group, .brush-control-value {
-        /*padding-top: var(--spectrum-global-dimension-size-75);*/
-        /*padding-bottom: var(--spectrum-global-dimension-size-75);*/
-    }
-
-    /*sp-action-group {*/
-    /*    --spectrum-actionbutton-m-icon-color-selected: var(--spectrum-semantic-cta-color-background-default);*/
-    /*    --spectrum-actionbutton-m-icon-color-selected-down: var(--spectrum-semantic-cta-color-background-default);*/
-    /*    --spectrum-actionbutton-m-icon-color-selected-hover: var(--spectrum-semantic-cta-color-background-default);*/
-    /*}*/
 </style>

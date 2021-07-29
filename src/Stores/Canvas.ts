@@ -16,24 +16,28 @@
 
 import {writable} from "svelte/store";
 import {GlobalElementProperties} from "@zindex/canvas-engine";
+import type {SnappingOptions} from "@zindex/canvas-engine";
 
 export const CanvasEngineState = {
     showGuides: writable<boolean>(true),
     lockGuides: writable<boolean>(false),
     showRuler: writable<boolean>(true),
     showGrid: writable<boolean>(false),
-    showGridToBack: writable<boolean>(true),
+    showGridToBack: writable<boolean>(false),
     highQuality: writable<boolean>(true),
-    snapping: writable({
+    snapping: writable<SnappingOptions>({
         // Global flag
         enabled: false,
         // Individual flags
-        grid: true,
+        pixel: false,
+        grid: false,
         guides: true,
-        pixel: true,
-        document: true,
-        objects: true,
-        points: true,
+
+        bounds: true,
+        points: false,
+
+        contours: false,
+        tolerance: 10,
     }),
 };
 

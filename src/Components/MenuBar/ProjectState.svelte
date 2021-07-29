@@ -1,6 +1,13 @@
 <script lang="ts">
-    import {ProjectFileHandle, CurrentProject, CurrentProjectState, IsProjectSaved} from "../../Stores";
+    import {
+        ProjectFileHandle,
+        CurrentProject,
+        CurrentProjectState,
+        IsProjectSaved,
+        notifySelectionChanged, notifyKeyframeSelectionChanged, CurrentTime
+    } from "../../Stores";
     import {NativeAnimationExporter, NativeAnimationImporter} from "../../Core";
+    import {tick} from "svelte";
 
     export let readonly: boolean = false;
 
@@ -53,11 +60,22 @@
         const stream = (await fileHandle.getFile()).stream();
         const importer = new NativeAnimationImporter();
         const project = await importer.import(stream);
+        importer.dispose();
+
         const old = $CurrentProject;
+        if (old) {
+            old.selection.clear();
+            notifySelectionChanged();
+            old.keyframeSelection.clear();
+            notifyKeyframeSelectionChanged();
+            old.engine?.stopRenderLoop();
+        }
+        $CurrentTime = 0;
         $CurrentProject = project;
         $IsProjectSaved = true;
+
+        await tick();
         old.dispose();
-        importer.dispose();
     }
 
     async function save() {

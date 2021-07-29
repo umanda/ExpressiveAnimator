@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import {createEventDispatcher, onDestroy, onMount, tick} from "svelte";
     import type {NumberField} from "@spectrum-web-components/number-field";

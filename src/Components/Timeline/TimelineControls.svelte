@@ -2,6 +2,7 @@
     import {CurrentDocumentAnimation, CurrentTime, CurrentProject, IsPlaying} from "../../Stores";
     import {AnimationProject, DocumentAnimation} from "../../Core";
     import {formatTime} from "./utils";
+    import TimelineAdd from "./TimelineAdd.svelte";
 
     let animationHandle: number = null;
     let animationStartTime: number;
@@ -64,9 +65,7 @@
                 <sp-icon name="expr:player-end" slot="icon" size="s"></sp-icon>
             </sp-action-button>
             <div class="timeline-controls-time">{formatTime($CurrentTime)}</div>
-            <sp-action-button title="Add animator" disabled>
-                <sp-icon name="expr:add-color" slot="icon" size="s"></sp-icon>
-            </sp-action-button>
+            <TimelineAdd disabled={$IsPlaying} />
         </sp-action-group>
     </div>
 </div>

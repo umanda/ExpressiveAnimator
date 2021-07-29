@@ -3,14 +3,14 @@
     import BrushControl from "../Brush";
     import Fill from "./Fill.svelte";
     import Stroke from "./Stroke.svelte";
-    import type {Brush, FillRule, StrokeLineCap, StrokeLineJoin} from "@zindex/canvas-engine";
-    import {BrushType, EmptyBrush, GradientBrush, SolidBrush} from "@zindex/canvas-engine";
+    import type {Brush, FillRule, StrokeLineCap, StrokeLineJoin, Rectangle} from "@zindex/canvas-engine";
+    import {BrushType, VectorElement} from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
+    import {AnimationProject} from "../../../Core";
 
     const dispatch = createEventDispatcher();
 
     export let showFill: boolean = true;
-    export let colorMode: string = undefined;
     export let unit: string = undefined;
     export let dashesPercent: boolean = true;
     export let readonly: boolean = false;
@@ -32,26 +32,29 @@
         strokeMiterLimit: number,
         strokeDashArray: number[],
         strokeDashOffset: number,
+
+        // bounds
+        localBounds?: Rectangle,
     };
 
 
     let brushProperty: string;
     $: brushProperty = showFill ? 'fill' : 'strokeBrush';
 
+    function changeFillBrushType(project: AnimationProject, element: VectorElement, value: BrushType): boolean {
+        return project.middleware.changeFillBrushType(element, value);
+    }
+
+    function changeStrokeBrushType(project: AnimationProject, element: VectorElement, value: BrushType): boolean {
+        return project.middleware.changeStrokeBrushType(element, value);
+    }
+
     function onBrushTypeChange(e: CustomEvent<BrushType>) {
-        switch (e.detail) {
-            case BrushType.None:
-                dispatch('update', {property: brushProperty, value: EmptyBrush.INSTANCE});
-                break;
-            case BrushType.Solid:
-                if (value[brushProperty] instanceof GradientBrush) {
-                    dispatch('update', {property: brushProperty, value: (value[brushProperty] as GradientBrush).stopColors.getColorAt(0) || SolidBrush.BLACK});
-                } else {
-                    dispatch('update', {property: brushProperty, value: SolidBrush.BLACK});
-                }
-                break;
-            // TODO: other brushes
-        }
+        dispatch('action', {
+            action: showFill ? changeFillBrushType : changeStrokeBrushType,
+            type: showFill ? 'changeFillBrushType' : 'changeStrokeBrushType',
+            value: e.detail
+        });
     }
 
     function onStart() {
@@ -63,13 +66,17 @@
     }
 
     function onAction(e) {
-        dispatch('action', {action: e.detail.action, value: {property: brushProperty, data: e.detail.value}});
+        dispatch('action', {
+            action: e.detail.action,
+            type: e.detail.type,
+            value: {property: brushProperty, value: e.detail.value},
+        });
     }
 </script>
 <div class="fill-stroke-brush">
     <BrushSwitch on:start on:end on:update on:action value={value} bind:showFill readonly={readonly} />
     <BrushControl on:change={onBrushTypeChange} on:start={onStart} on:end on:update={onUpdate} on:action={onAction}
-                  value={showFill ? value.fill : value.strokeBrush} bind:colorMode readonly={readonly} />
+                  value={showFill ? value.fill : value.strokeBrush} readonly={readonly} bounds={value.localBounds} />
 </div>
 <Stroke on:start on:end on:update on:action value={value} unit={unit} dashesPercent={dashesPercent} readonly={readonly} />
 <Fill on:start on:end on:update on:action value={value} readonly={readonly} />

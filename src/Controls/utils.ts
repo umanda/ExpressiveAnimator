@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-export type TShirtSize = 'S' | 'M' | 'L' | 'XL';
-export type TShirtSizeSimple = 'S' | 'M' | 'L';
-export type TShirtSizeExtended = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' | 'XXXL';
-export type ButtonVariant = 'cta' | 'primary' | 'secondary' | 'negative' | 'overBackground';
-
-export function TShirtSizeToNumber(size: TShirtSize, fallback: string = '100'): string {
-    switch (size) {
-        case 'XL':
-            return '300';
-        case 'L':
-            return '200';
-        case 'M':
-            return '100';
-        case 'S':
-            return '75';
-        default:
-            return fallback;
-    }
-}
+import {MouseButton} from "../../../CanvasEngine";
 
 export function formatNumber(value: number, digits: number): string {
     if (Number.isNaN(value) || !Number.isFinite(value)) {
@@ -236,10 +218,12 @@ export function getScaled(value: number, scale: number): number {
 
 export function dragAction(node: HTMLElement, params) {
     let surface: HTMLElement = params?.surface,
-        move: ((value: {x: number, y: number}, e?: PointerEvent) => void) = params?.move,
-        start: (value: {x: number, y: number}, e?: PointerEvent) => void = params?.start,
-        end: (changed: boolean, value: {x: number, y: number}, e?: PointerEvent) => void = params?.end,
-        raw: boolean = params?.raw
+        move: ((value: {x: number, y: number}, e?: PointerEvent, meta?: any) => void) = params?.move,
+        start: (value: {x: number, y: number}, e?: PointerEvent, meta?: any) => void = params?.start,
+        end: (changed: boolean, value: {x: number, y: number}, e?: PointerEvent, meta?: any) => void = params?.end,
+        raw: boolean = params?.raw,
+        filter: (node: HTMLElement) => boolean = params?.filter,
+        onlySelf: boolean = params?.onlySelf
     ;
 
     let last: {x: number, y: number, bbox?: DOMRect};
@@ -247,43 +231,59 @@ export function dragAction(node: HTMLElement, params) {
     let bbox: DOMRect;
 
     const onPointerMove = (e: PointerEvent) => {
+        if (!e.isPrimary) {
+            return;
+        }
         const value = raw ? {x: e.clientX, y: e.clientY, bbox} : getXYPercent(e, bbox);
         if (last.x !== value.x || last.y !== value.y) {
             last = value;
-            move && move(value, e);
+            move && move(value, e, node);
         }
     };
 
     const onPointerUp = (e: PointerEvent = null) => {
-        surface.removeEventListener('pointermove', onPointerMove);
-        surface.removeEventListener('pointerup', onPointerUp);
+        if (!e.isPrimary) {
+            return;
+        }
+        const target = onlySelf ? node : surface;
+        target.removeEventListener('pointermove', onPointerMove);
+        target.removeEventListener('pointerup', onPointerUp);
         if (e) {
-            (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+            surface.releasePointerCapture(e.pointerId);
         }
 
-        end && end(original.x !== last.x || original.y !== last.y, last, e);
+        end && end(original.x !== last.x || original.y !== last.y, last, e, node);
         bbox = original = last = null;
-        node.classList.remove('is-focused');
+        node.removeAttribute('focus');
+        node.blur();
     };
 
     const onPointerDown = (e: PointerEvent) => {
+        if (!e.isPrimary || e.button !== MouseButton.Left) {
+            return;
+        }
+        if (filter != null && !filter(node)) {
+            return;
+        }
         bbox = surface.getBoundingClientRect();
         original = last = raw ? {x: e.clientX, y: e.clientY, bbox} : getXYPercent(e, bbox);
-        start && start(original, e);
+        start && start(original, e, node);
         if (e.defaultPrevented) {
             return;
         }
-        surface.addEventListener('pointermove', onPointerMove);
-        surface.addEventListener('pointerup', onPointerUp);
-        node.classList.add('is-focused');
-        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+        const target = onlySelf ? node : surface;
+        target.addEventListener('pointermove', onPointerMove);
+        target.addEventListener('pointerup', onPointerUp);
+        node.focus();
+        node.setAttribute('focus', '');
+        surface.setPointerCapture(e.pointerId);
         e.stopPropagation();
     }
 
     let added = false;
     if (surface) {
         added = true;
-        surface.addEventListener('pointerdown', onPointerDown);
+        (onlySelf ? surface : node).addEventListener('pointerdown', onPointerDown);
     }
 
     return {
@@ -293,8 +293,10 @@ export function dragAction(node: HTMLElement, params) {
             end = params?.end;
             move = params?.move;
             raw = params?.raw;
+            filter = params?.filter;
+            onlySelf = params?.onlySelf;
             if (surface && !added) {
-                surface.addEventListener('pointerdown', onPointerDown);
+                (onlySelf ? node : surface).addEventListener('pointerdown', onPointerDown);
                 added = true;
             }
         },
@@ -304,6 +306,14 @@ export function dragAction(node: HTMLElement, params) {
             }
         },
     };
+}
+
+export function blurOrCallback(el: HTMLElement, callback: () => any) {
+    if (el != null && el.ownerDocument.activeElement === el) {
+        el.blur();
+    } else {
+        callback();
+    }
 }
 
 let id = 0;

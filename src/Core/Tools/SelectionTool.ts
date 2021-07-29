@@ -60,7 +60,7 @@ export class SelectionTool extends BaseTool {
     private resizePosition: AxisPointPosition | null = null;
     private moveByMiddle: boolean = true;
 
-    protected defaultCanvasCursor: Cursor = Cursor.Pointer;
+    protected defaultCanvasCursor: Cursor = Cursor.Arrow;
     private action: Action = Action.None;
     private changed: boolean = false;
     private hoverGuide: Guide|null = null;
@@ -94,25 +94,25 @@ export class SelectionTool extends BaseTool {
             case Action.Hover:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
                 this.drawTool(engine);
-                engine.cursor = this.moveByMiddle ? Cursor.PointerMove : Cursor.PointerSelectable;
+                engine.cursor = this.moveByMiddle ? Cursor.ArrowMove : Cursor.ArrowSelectable;
                 break;
             case Action.Select:
                 drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
             // fall
             case Action.Move:
                 this.drawTool(engine);
-                engine.cursor = Cursor.PointerMove;
+                engine.cursor = Cursor.ArrowMove;
                 break;
             case Action.RectangleSelection:
                 drawSelectionRectangle(engine, this.selectionStart, this.selectionEnd);
-                engine.cursor = Cursor.Pointer;
+                engine.cursor = Cursor.Arrow;
                 break;
             case Action.Pan:
                 engine.cursor = Cursor.HandHold;
                 break;
             case Action.Resize:
                 this.drawTool(engine);
-                engine.cursor = Cursor.PointerResize;
+                engine.cursor = Cursor.ArrowResize;
                 break;
             case Action.MoveHorizontalGuide:
                 this.drawTool(engine);

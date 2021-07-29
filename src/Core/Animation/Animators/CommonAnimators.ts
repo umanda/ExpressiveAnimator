@@ -86,7 +86,7 @@ export const TransformAnimators: ElementAnimatorMap<Element> = {
 export const FillAnimators: ElementAnimatorMap<VectorElement> = {
     fill: {
         id: 'fill',
-        title: 'Fill',
+        title: 'Fill Color',
         create() {
             return new BrushAnimation();
         }
@@ -103,7 +103,7 @@ export const FillAnimators: ElementAnimatorMap<VectorElement> = {
 export const StrokeAnimators: ElementAnimatorMap<VectorElement> = {
     strokeBrush: {
         id: 'stroke',
-        title: 'Stroke',
+        title: 'Stroke Color',
         create() {
             return new BrushAnimation();
         }

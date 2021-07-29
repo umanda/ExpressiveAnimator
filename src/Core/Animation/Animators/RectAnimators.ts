@@ -24,6 +24,7 @@ export const RectAnimators: ElementAnimatorMap<RectElement> = {
     width: {
         id: 'width',
         title: 'Width',
+        type: 'rect',
         create() {
             return new PositiveNumberAnimation();
         }
@@ -31,6 +32,7 @@ export const RectAnimators: ElementAnimatorMap<RectElement> = {
     height: {
         id: 'height',
         title: 'Height',
+        type: 'rect',
         create() {
             return new PositiveNumberAnimation();
         }
@@ -38,6 +40,7 @@ export const RectAnimators: ElementAnimatorMap<RectElement> = {
     radius: {
         id: 'rect-radius',
         title: 'Radius',
+        type: 'rect',
         create() {
             return new RectRadiusAnimation();
         }

@@ -31,26 +31,6 @@
     /* Scroll sync Y */
     let leftPane: HTMLElement;
     let rightPane: HTMLElement;
-    let isScrollingTop: boolean = false;
-    let prevScrollTop = scrollTop;
-    const onScroll = e => {
-        if (isScrollingTop) {
-            e.preventDefault();
-            return;
-        }
-        isScrollingTop = true;
-        const el = e.target as HTMLElement;
-
-        const top = el.scrollTop;
-        if (top !== prevScrollTop) {
-            (el === rightPane ? leftPane : rightPane).scrollTop = top;
-            scrollTop = prevScrollTop = top;
-        } else if (el === rightPane) {
-            scrollLeft = rightPane.scrollLeft;
-            //rightPane.scrollWidth
-        }
-        isScrollingTop = false;
-    };
 
     let selectionRect: Rectangle = null;
     let selectionRectPivot = null;
@@ -64,6 +44,47 @@
     let position: number = 0;
     let currentSelectionData: { animations: Set<Animation<any>>, keyframes: Set<Keyframe<any>> } = null;
 
+    function handleScroll(event: Event) {
+        if (event.target === rightPane) {
+            if (scrollTop !== rightPane.scrollTop) {
+                scrollTop = rightPane.scrollTop;
+            }
+            if (scrollLeft !== rightPane.scrollLeft) {
+                scrollLeft = rightPane.scrollLeft;
+            }
+            if (leftPane.scrollTop !== scrollTop) {
+                leftPane.scrollTop = scrollTop;
+            }
+        } else {
+            if (scrollTop !== leftPane.scrollTop) {
+                scrollTop = leftPane.scrollTop;
+            }
+            if (rightPane.scrollTop !== scrollTop) {
+                rightPane.scrollTop = scrollTop;
+            }
+        }
+    }
+
+    function handleWheel(event: WheelEvent) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        let {deltaY, deltaX, shiftKey} = event;
+
+        if (shiftKey) {
+            deltaX = Math.abs(deltaX) > Math.abs(deltaY) ? deltaX : deltaY;
+            deltaY = 0;
+        }
+
+        if (deltaX !== 0 && rightPane.contains(event.target as HTMLElement)) {
+            rightPane.scrollLeft += deltaX;
+        }
+
+        if (deltaY !== 0) {
+            leftPane.scrollTop += deltaY;
+            rightPane.scrollTop += deltaY;
+        }
+    }
+
     function getTimelinePoint(e: PointerEvent): Point {
         return new Point(
             e.clientX - rightPane.offsetLeft + rightPane.scrollLeft,
@@ -72,6 +93,10 @@
     }
 
     function onTimelinePointerDown(e: PointerEvent) {
+        if (!e.isPrimary || e.button !== MouseButton.Left) {
+            return;
+        }
+
         const target = e.target as HTMLElement;
         if (target.classList.contains('timeline-keyframe') ||
             target.classList.contains('timeline-easing')) {
@@ -99,6 +124,9 @@
     }
 
     function onTimelinePointerMove(e: PointerEvent) {
+        if (!e.isPrimary) {
+            return;
+        }
         selectionRect = Rectangle.fromPoints(selectionRectPivot, getTimelinePoint(e));
     }
 
@@ -116,6 +144,10 @@
     }
 
     function onTimelinePointerUp(e: PointerEvent) {
+        if (!e.isPrimary) {
+            return;
+        }
+
         rightPane.removeEventListener('pointermove', onTimelinePointerMove);
         rightPane.removeEventListener('pointerup', onTimelinePointerUp);
         rightPane.releasePointerCapture(e.pointerId);
@@ -290,7 +322,8 @@
     $: checkKeyframeSelection($CurrentTimelineFilterMode, $CurrentSelection);
 </script>
 <div class="timeline">
-    <div bind:this={leftPane} on:scroll={onScroll} class="timeline-elements scroll scroll-invisible scroll-no-padding" hidden-x>
+    <div bind:this={leftPane} on:scroll={handleScroll} on:wheel={handleWheel}
+         class="timeline-elements scroll scroll-invisible scroll-no-padding" hidden-x>
         {#each $CurrentAnimatedElements as animated (animated.element.id)}
             <TimelineElementWrapper
                     animated={animated}
@@ -302,7 +335,7 @@
             />
         {/each}
     </div>
-    <div bind:this={rightPane} on:scroll={onScroll} on:pointerdown={onTimelinePointerDown}
+    <div bind:this={rightPane} on:scroll={handleScroll} on:wheel={handleWheel} on:pointerdown={onTimelinePointerDown}
          class="timeline-keyframes scroll scroll-no-hide scroll-no-padding">
         <div class="timeline-items-wrapper">
             {#each $CurrentAnimatedElements as animated}
@@ -350,6 +383,7 @@
     }
 
     .timeline > .timeline-keyframes {
+        touch-action: none;
         position: relative;
         flex: 1;
     }

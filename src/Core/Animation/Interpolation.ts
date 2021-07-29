@@ -18,13 +18,20 @@ import {
     Brush,
     BrushType,
     clamp,
-    Color, leastCommonMultiple,
+    Color,
+    ConicalGradientBrush, EmptyBrush,
+    GradientBrush,
+    leastCommonMultiple,
+    LinearGradientBrush,
     Path,
     PathNode,
     Point,
+    RadialGradientBrush,
     RectShapeRadius,
     round,
-    SolidBrush
+    SolidBrush, StopColor,
+    StopColorList,
+    TwoPointGradientBrush
 } from "@zindex/canvas-engine";
 
 export type InterpolationFunction<T> = (from: T, to: T, percent: number) => T;
@@ -106,19 +113,183 @@ export function interpolateColor(from: Color, to: Color, percent: number = 0.5):
     );
 }
 
+const BrushInterpolation = {
+    [BrushType.None]: {
+        [BrushType.None]: () => EmptyBrush.INSTANCE,
+        [BrushType.Solid]: (_, to: SolidBrush, percent: number) => to.withColor(Color.transparent.interpolate(to.color, percent)),
+        [BrushType.LinearGradient]: emptyToGradient,
+        [BrushType.RadialGradient]: emptyToGradient,
+        [BrushType.TwoPointGradient]: emptyToGradient,
+        [BrushType.ConicalGradient]: emptyToGradient,
+    },
+    [BrushType.Solid]: {
+        [BrushType.None]: (from: SolidBrush, to: EmptyBrush, percent: number) => from.withColor(from.color.interpolate(Color.transparent, percent)),
+        [BrushType.Solid]: interpolateSolidBrush,
+        [BrushType.LinearGradient]: solidToGradient,
+        [BrushType.RadialGradient]: solidToGradient,
+        [BrushType.TwoPointGradient]: solidToGradient,
+        [BrushType.ConicalGradient]: solidToGradient,
+    },
+    [BrushType.LinearGradient]: {
+        [BrushType.None]: gradientToEmpty,
+        [BrushType.Solid]: gradientToSolid,
+        [BrushType.LinearGradient]: interpolateLinearGradient,
+        [BrushType.RadialGradient]: interpolateGradients,
+        [BrushType.TwoPointGradient]: interpolateGradients,
+        [BrushType.ConicalGradient]: interpolateGradients,
+    },
+    [BrushType.RadialGradient]: {
+        [BrushType.None]: gradientToEmpty,
+        [BrushType.Solid]: gradientToSolid,
+        [BrushType.LinearGradient]: interpolateGradients,
+        [BrushType.RadialGradient]: interpolateRadialGradient,
+        [BrushType.TwoPointGradient]: interpolateGradients,
+        [BrushType.ConicalGradient]: interpolateGradients,
+    },
+    [BrushType.TwoPointGradient]: {
+        [BrushType.None]: gradientToEmpty,
+        [BrushType.Solid]: gradientToSolid,
+        [BrushType.LinearGradient]: interpolateGradients,
+        [BrushType.RadialGradient]: interpolateGradients,
+        [BrushType.TwoPointGradient]: interpolateTwoPointGradient,
+        [BrushType.ConicalGradient]: interpolateGradients,
+    },
+    [BrushType.ConicalGradient]: {
+        [BrushType.None]: gradientToEmpty,
+        [BrushType.Solid]: gradientToSolid,
+        [BrushType.LinearGradient]: interpolateGradients,
+        [BrushType.RadialGradient]: interpolateGradients,
+        [BrushType.TwoPointGradient]: interpolateGradients,
+        [BrushType.ConicalGradient]: interpolateConicalGradient,
+    },
+}
+
 export function interpolateBrush(from: Brush, to: Brush, percent: number = 0.5): Brush {
-    if (from.type !== to.type) {
-        return interpolateDiscrete(from, to, percent);
+    if (percent <= 0) {
+        return from;
     }
 
-    switch (from.type) {
-        case BrushType.Solid:
-            return new SolidBrush((from as SolidBrush).color.interpolate((to as SolidBrush).color, percent));
-            // TODO: ...
+    if (percent >= 1) {
+        return to;
+    }
+
+    if (BrushInterpolation.hasOwnProperty(from.type) && BrushInterpolation[from.type].hasOwnProperty(to.type)) {
+        return BrushInterpolation[from.type][to.type](from, to, percent);
     }
 
     return interpolateDiscrete(from, to, percent);
 }
+
+function colorToStopColorList(color: Color, stops: StopColorList, percent: number): StopColorList {
+    return new StopColorList(stops.list.map<StopColor>(stop => ({
+        offset: stop.offset,
+        color: color.interpolate(stop.color, percent),
+    })));
+}
+
+function interpolateStopColorList(from: StopColorList, to: StopColorList, percent: number): StopColorList {
+    return new StopColorList(interpolateStopColorArray(from.list, to.list, percent));
+}
+
+function interpolateStopColorArray(from: StopColor[], to: StopColor[], percent: number): StopColor[] {
+    const diff = to.length - from.length;
+
+    if (diff > 0) {
+        from = from.slice();
+        addMissingStops(from, to, diff);
+    } else if (diff < 0) {
+        to= to.slice();
+        addMissingStops(to, from, -diff);
+    }
+
+    const list: StopColor[] = [];
+    const length = from.length;
+
+    for (let i = 0; i < length; i++) {
+        list.push({
+            offset: interpolatePercent(from[i].offset, to[i].offset, percent),
+            color: from[i].color.interpolate(to[i].color, percent),
+        });
+    }
+
+    return list;
+}
+
+function addMissingStops(dst: StopColor[], src: StopColor[], count: number) {
+    // TODO: check, is this right?
+    const last = src.length - 1;
+    for (let i = 0; i < count; i++) {
+        dst.push({
+            offset: 1,
+            color: src[last - i].color,
+        });
+    }
+}
+
+function emptyToGradient(from: EmptyBrush, to: GradientBrush, percent: number): GradientBrush {
+    return to.withStopColorList(colorToStopColorList(Color.transparent, to.stopColors, percent));
+}
+
+function solidToGradient(from: SolidBrush, to: GradientBrush, percent: number): GradientBrush {
+    return to.withStopColorList(colorToStopColorList(from.color, to.stopColors, percent));
+}
+
+function gradientToEmpty(from: GradientBrush, to: EmptyBrush, percent: number): GradientBrush {
+    return from.withStopColorList(colorToStopColorList(Color.transparent, from.stopColors, 1 - percent));
+}
+
+function gradientToSolid(from: GradientBrush, to: SolidBrush, percent: number): GradientBrush {
+    return from.withStopColorList(colorToStopColorList(to.color, from.stopColors, 1 - percent));
+}
+
+function interpolateSolidBrush(from: SolidBrush, to: SolidBrush, percent: number): SolidBrush {
+    return from.withColor(from.color.interpolate(to.color, percent));
+}
+
+// Different gradient types
+function interpolateGradients(from: GradientBrush, to: GradientBrush, percent: number): GradientBrush {
+    return (percent < 0.5 ? from : to).withStopColorList(interpolateStopColorList(from.stopColors, to.stopColors, percent));
+}
+
+function interpolateLinearGradient(from: LinearGradientBrush, to: LinearGradientBrush, percent: number): LinearGradientBrush {
+    return new LinearGradientBrush(
+        interpolatePoint(from.start, to.start, percent),
+        interpolatePoint(from.end, to.end, percent),
+        interpolateStopColorList(from.stopColors, to.stopColors, percent),
+        interpolateDiscrete(from.spread, to.spread, percent),
+    );
+}
+
+function interpolateRadialGradient(from: RadialGradientBrush, to: RadialGradientBrush, percent: number): RadialGradientBrush {
+    return new RadialGradientBrush(
+        interpolatePoint(from.center, to.center, percent),
+        interpolatePositiveNumber(from.radius, to.radius, percent),
+        interpolateStopColorList(from.stopColors, to.stopColors, percent),
+        interpolateDiscrete(from.spread, to.spread, percent),
+    );
+}
+
+function interpolateTwoPointGradient(from: TwoPointGradientBrush, to: TwoPointGradientBrush, percent: number): TwoPointGradientBrush {
+    return new TwoPointGradientBrush(
+        interpolatePoint(from.start, to.start, percent),
+        interpolatePositiveNumber(from.startRadius, to.startRadius, percent),
+        interpolatePoint(from.end, to.end, percent),
+        interpolatePositiveNumber(from.endRadius, to.endRadius, percent),
+        interpolateStopColorList(from.stopColors, to.stopColors, percent),
+        interpolateDiscrete(from.spread, to.spread, percent),
+    );
+}
+
+function interpolateConicalGradient(from: ConicalGradientBrush, to: ConicalGradientBrush, percent: number): ConicalGradientBrush {
+    return new ConicalGradientBrush(
+        interpolatePoint(from.center, to.center, percent),
+        interpolatePositiveNumber(from.startAngle, to.startAngle, percent),
+        interpolatePositiveNumber(from.endAngle, to.endAngle, percent),
+        interpolateStopColorList(from.stopColors, to.stopColors, percent),
+        interpolateDiscrete(from.spread, to.spread, percent),
+    );
+}
+
 
 export function interpolateDashArray(from: number[], to: number[], percent: number = 0.5): number[] {
     if (percent <= 0) {

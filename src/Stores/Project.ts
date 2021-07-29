@@ -66,14 +66,22 @@ export const CurrentProject: CurrentProjectDef = {
         project.update(oldProject => {
             if (callback) {
                 callback(oldProject);
+            } else {
+                oldProject?.dispose();
             }
             return newProject;
         })
     },
     unloadProject(dispose: boolean = true): void {
         project.update(currentProject => {
-            if (dispose && currentProject) {
-                currentProject.dispose();
+            if (currentProject) {
+                currentProject.selection.clear();
+                currentProject.keyframeSelection.clear();
+                // deactivate tool?
+                currentProject?.engine?.stopRenderLoop();
+                if (dispose) {
+                    currentProject.dispose();
+                }
             }
             return null;
         });

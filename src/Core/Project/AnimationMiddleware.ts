@@ -155,7 +155,7 @@ export class AnimationMiddleware extends Middleware<AnimationProject> {
                     return false;
                 }
                 // Add first keyframe
-                if (documentAnimation.startTime != project.time) {
+                if (documentAnimation.startTime !== project.time) {
                     animation.addKeyframeAtOffset(documentAnimation.startTime, element[property]);
                     keyframeAdded = true;
                 }

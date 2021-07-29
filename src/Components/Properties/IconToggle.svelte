@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import {createEventDispatcher} from "svelte";
     const dispatch = createEventDispatcher();

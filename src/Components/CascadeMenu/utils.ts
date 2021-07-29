@@ -18,6 +18,6 @@ export type MenuItemDef = {
     title: string,
     disabled?: boolean,
     shortcut?: string[],
-    action?: () => void,
     children?: (MenuItemDef | null)[],
+    [key: string]: any;
 };

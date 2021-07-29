@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import type {Slider} from "@spectrum-web-components/slider";
     import type {NumberField} from "@spectrum-web-components/number-field";
@@ -70,7 +71,9 @@
             return;
         }
 
-        let number = target.value;
+        let number = target.nodeName === 'SP-SLIDER'
+            ? (target.focusElement as HTMLInputElement).valueAsNumber
+            : target.value;
         if (isInvalidNumber(number)) {
             return;
         }
@@ -156,6 +159,7 @@
         on:input={onInput}
         on:focus={onFocus}
         on:blur={onBlur}
+        on:pointerup={onFinish}
 >
     {#if editable}
         <sp-number-field

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import type {Animation} from "../../Core";
-
 export const RULER_PADDING: number = 6;
 export const RULER_DIVISIONS: number = 30;
 export const FRAME = 1000 / RULER_DIVISIONS;
@@ -78,7 +76,7 @@ export function renderRuler(context: CanvasRenderingContext2D, width: number, he
     let graduationNo = Math.floor(t);
     const delta = ((Math.round(t * 100) - graduationNo * 100) / 100);
 
-    let x = RULER_PADDING > scroll ? RULER_PADDING - scroll : RULER_PADDING;
+    let x = RULER_PADDING;
     x -= delta * MINOR_GRADUATION_WIDTH * zoom;
 
     const step = MINOR_GRADUATION_WIDTH * zoom;

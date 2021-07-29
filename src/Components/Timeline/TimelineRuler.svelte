@@ -1,6 +1,6 @@
 <script lang="ts">
     import {onMount, tick} from "svelte";
-    import {renderRuler, roundTime, getTimeAtX, getDeltaTimeByX, getDurationBounds} from "./utils";
+    import {renderRuler, roundTime, getTimeAtX, getDeltaTimeByX} from "./utils";
     import {CurrentTheme, CurrentTime} from "../../Stores";
 
     export let zoom: number = 1;

@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <script lang="ts">
     import "@spectrum-css/dropindicator/dist/index-vars.css";
     import {mergeClasses} from "./utils";

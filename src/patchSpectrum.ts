@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import {html} from "@spectrum-web-components/base";
+import {html, svg, nothing} from "@spectrum-web-components/base";
+import type {TemplateResult} from "@spectrum-web-components/base";
 
 export async function patchSpectrum() {
     await patchIcon();
@@ -22,6 +23,7 @@ export async function patchSpectrum() {
     await patchSlider();
     await patchPicker();
     await patchTabPanel();
+    await patchColorLoupe();
 }
 
 async function patchSlider() {
@@ -102,5 +104,46 @@ async function patchIcon() {
             await this.updateIconPromise;
         }
         return updateIcon.call(this);
+    }
+}
+
+async function patchColorLoupe() {
+    await customElements.whenDefined('sp-color-loupe');
+    const loupe = customElements.get('sp-color-loupe');
+
+    Object.defineProperty(loupe.prototype, 'checkerboard', {
+        value: true,
+        writable: true,
+        enumerable: true
+    });
+
+    loupe.prototype.renderCheckerBoardDefs = function (): TemplateResult {
+        const size = 8;
+        const width = 100 * size / 24;
+        const height = width * 3 / 4;
+        return svg`<defs>
+            <pattern id="loupe-checkerboard" shape-rendering="geometricPrecision" color-rendering="optimizeQuality" x="0" y="0" width="${width}%" height="${height}%">
+                <rect x="0" y="0" width="${size}" height="${size}" fill="#bcbcbc" />
+                <rect x="${size}" y="0" width="${size}" height="${size}" fill="#fff" />
+                <rect x="0" y="${size}" width="${size}" height="${size}" fill="#fff" />
+                <rect x="${size}" y="${size}" width="${size}" height="${size}" fill="#bcbcbc" />
+            </pattern>
+        </defs>`;
+    }
+
+    loupe.prototype.render = function (): TemplateResult {
+        return html`
+            <svg>
+                ${this.checkerboard ? this.renderCheckerBoardDefs() : nothing}
+                <g transform="translate(1 1)">
+                    ${this.checkerboard ? svg`<path class="inner" fill="url(#loupe-checkerboard)" d="M24,0A24,24,0,0,1,48,24c0,16.255-24,40-24,40S0,40.255,0,24A24,24,0,0,1,24,0Z" />` : nothing}
+                    <path class="inner" fill="${this.color}" d="M24,0A24,24,0,0,1,48,24c0,16.255-24,40-24,40S0,40.255,0,24A24,24,0,0,1,24,0Z" />
+                    <path
+                        class="outer"
+                        d="M24,2A21.98,21.98,0,0,0,2,24c0,6.2,4,14.794,11.568,24.853A144.233,144.233,0,0,0,24,61.132,144.085,144.085,0,0,0,34.4,48.893C41.99,38.816,46,30.209,46,24A21.98,21.98,0,0,0,24,2m0-2A24,24,0,0,1,48,24c0,16.255-24,40-24,40S0,40.255,0,24A24,24,0,0,1,24,0Z"
+                    />
+                </g>
+            </svg>
+        `;
     }
 }

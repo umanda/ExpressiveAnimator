@@ -1,3 +1,4 @@
+<svelte:options immutable={true} />
 <div class="property-action-wrapper very-small-button">
     <slot />
 </div>

@@ -1,7 +1,7 @@
 <script lang="ts">
     import {onMount, onDestroy, tick} from "svelte";
     import type {KeyframeSelection, AnimationDocument} from "../Core";
-    import type {CanvasEngine, Selection} from "@zindex/canvas-engine";
+    import type {CanvasEngine, Selection, SnappingOptions} from "@zindex/canvas-engine";
 
     import {
         CurrentTool, CurrentTheme, CurrentTime,
@@ -14,7 +14,7 @@
         notifySelectionChanged,
     } from "../Stores";
 
-    const {showRuler, showGuides, lockGuides, showGrid, showGridToBack, highQuality} = CanvasEngineState;
+    const {showRuler, showGuides, lockGuides, showGrid, showGridToBack, highQuality, snapping} = CanvasEngineState;
 
     export let hidden: boolean = false;
 
@@ -30,11 +30,24 @@
     $: if (canvas) canvas.showGrid = $showGrid;
     $: if (canvas) canvas.showGridToBack = $showGridToBack;
     $: if (canvas) canvas.highQuality = $highQuality;
+    $: if (canvas) setSnapping(canvas, $snapping as SnappingOptions);
     $: {
         if (canvas && $CurrentProject && $CurrentProject.middleware.setTime($CurrentTime)) {
             canvas.invalidate();
             notifyPropertiesChanged();
         }
+    }
+
+    function setSnapping(canvas: CanvasEngine, options: SnappingOptions) {
+        const snap = canvas.snappingOptions;
+        snap.enabled = options.enabled;
+        snap.grid = options.grid;
+        snap.pixel = options.pixel;
+        snap.guides = options.guides;
+        snap.bounds = options.bounds;
+        snap.points = options.points;
+        snap.contours = options.contours;
+        snap.tolerance = options.tolerance;
     }
 
 
@@ -67,7 +80,7 @@
 
     function beforeWindowUnload() {
         if (canvas) {
-            // canvas.dispose();
+            canvas.dispose();
             // removing the canvas from dom
             canvas.parentNode.removeChild(canvas);
             canvas = null;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import type {Disposable, Element, Selection} from "@zindex/canvas-engine";
+import type {Disposable, Selection} from "@zindex/canvas-engine";
 import type {AnimationDocument} from "./AnimationDocument";
 import type {Keyframe, Animation} from "../Animation";
 
