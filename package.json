@@ -31,7 +31,7 @@
     "@adobe/focus-ring-polyfill": "^0.1.5",
     "@ctrl/tinycolor": "^3.4.0",
     "@spectrum-web-components/bundle": "^0.22.6",
-    "@zindex/canvas-engine": "^0.6.0",
+    "@zindex/canvas-engine": "ExpressiveSuite/CanvasEngine#v0.7.0",
     "hotkeys-js": "^3.8.7",
     "idb-keyval": "^5.1.5"
   },
