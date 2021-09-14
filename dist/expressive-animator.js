@@ -26637,7 +26637,7 @@ display: none;
      * See the License for the specific language governing permissions and
      * limitations under the License.
      */
-    const CURRENT_VERSION = 400;
+    const CURRENT_VERSION = 401;
     var FileMarker;
     (function (FileMarker) {
         // ex7e
@@ -38600,7 +38600,7 @@ display: none;
             try {
                 FileHandle = await window.showSaveFilePicker({
                     id: 'openProject',
-                    suggestedName: getSuggestedName(((_a = current.masterDocument) === null || _a === void 0 ? void 0 : _a.title) || 'New project', 'svg'),
+                    suggestedName: getSuggestedName(((_a = current.masterDocument) === null || _a === void 0 ? void 0 : _a.title) || 'New project', 'eaf'),
                     // excludeAcceptAllOption: true,
                     types: EAFileTypes
                 });

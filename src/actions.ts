@@ -835,7 +835,7 @@ async function saveProjectInternal(current: AnimationProject, saveAs?: boolean):
         try {
             FileHandle = await window.showSaveFilePicker({
                 id: 'openProject',
-                suggestedName: getSuggestedName(current.masterDocument?.title || 'New project', 'svg'),
+                suggestedName: getSuggestedName(current.masterDocument?.title || 'New project', 'eaf'),
                 // excludeAcceptAllOption: true,
                 types: EAFileTypes
             });

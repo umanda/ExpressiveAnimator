@@ -21,7 +21,7 @@ import type {AnimationDocument} from "../AnimationDocument";
 import {compress, decompress, toStream, Serializer, readBytes} from "@zindex/canvas-engine";
 import LegacyImport from "./LegacyImport";
 
-export const CURRENT_VERSION = 400;
+export const CURRENT_VERSION = 401;
 
 export type Manifest = {
     version: number,
