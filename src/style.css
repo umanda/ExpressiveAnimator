@@ -26,6 +26,10 @@ sp-color-handle {
     outline: none !important;
 }
 
+sp-dialog-wrapper, sp-popover {
+    user-select: none;
+}
+
 canvas-engine, canvas-engine[theme="dark"] {
     --canvas-engine-background-color: #252525;
 }

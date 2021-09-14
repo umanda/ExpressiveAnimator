@@ -26,7 +26,7 @@ export const RegularPolygonAnimators: ElementAnimatorMap<RegularPolygonElement> 
         title: 'Radius',
         type: 'regular-polygon',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('radius', 'regular-polygon');
         }
     },
     cornerRadius: {
@@ -34,7 +34,7 @@ export const RegularPolygonAnimators: ElementAnimatorMap<RegularPolygonElement> 
         title: 'Roundness',
         type: 'regular-polygon',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('cornerRadius', 'regular-polygon');
         }
     },
 }

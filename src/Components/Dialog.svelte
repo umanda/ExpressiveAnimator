@@ -1,13 +1,15 @@
 <script lang="ts">
+    import type {DialogDef} from "../actions";
     import {Overlay} from '@spectrum-web-components/overlay';
     import {createEventDispatcher, onMount} from "svelte";
-    import type {DialogDef} from "./DialogType";
 
-    export let data: DialogDef;
     const dispatch = createEventDispatcher();
 
+    export let data: DialogDef;
+
     let isWorking: boolean = false;
-    let error = null;
+    let error: string = null;
+    let onClose: () => void;
 
     async function onAction(action: (value?: any) => Promise<boolean | void>) {
         if (isWorking) {
@@ -30,7 +32,9 @@
             }
         }
 
-        close();
+        if (onClose) {
+            onClose();
+        }
     }
 
     async function onCancel() {
@@ -45,35 +49,40 @@
         await onAction(data.secondary?.action);
     }
 
-
     let content: HTMLElement & {open: boolean} = undefined;
-    let closeOverlayPromise: Promise<() => void>;
 
-    function open() {
+    async function open() {
         if (content.open) {
             return;
         }
         content.open = true;
-        closeOverlayPromise = Overlay.open(content.parentElement, 'modal', content, {
+        const closeDialog = await Overlay.open(content.parentElement, 'modal', content, {
             placement: 'none',
-            receivesFocus: 'auto'
+            receivesFocus: data.autofocus !== false ? 'auto' : undefined,
         });
-    }
-
-    function close() {
-        if (!content || !content.open) {
-            return;
-        }
-        closeOverlayPromise.then(close => {
-            close();
-            closeOverlayPromise = null;
+        onClose = () => {
+            if (!content) {
+                return;
+            }
+            closeDialog();
             content.open = false;
-        });
+        };
+        if (data.abort) {
+            setTimeout(() => data.abort().then(onCancel), 0);
+        }
+        return onClose;
     }
 
-    onMount(() => {
-       open();
-       return close;
+    function onCloseCallback() {
+        if (data.close) {
+            data.close();
+        }
+        dispatch('close');
+    }
+
+    onMount(async () => {
+       content['overlayCloseCallback'] = onCloseCallback;
+       return await open();
     });
 </script>
 <sp-dialog-wrapper
@@ -92,12 +101,11 @@
         secondary-label={data.secondary?.label || undefined}
         cancel-label={data.cancel?.label || undefined}
 
-        on:close={close}
         on:cancel={onCancel}
         on:confirm={onConfirm}
         on:secondary={onSecondary}
 >
-    <slot isWorking={isWorking} closeDialog={close} value={data.value} />
+    <slot isWorking={isWorking} action={onAction} />
 </sp-dialog-wrapper>
 <style>
     sp-dialog-wrapper[error] {

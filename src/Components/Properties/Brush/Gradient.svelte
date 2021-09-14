@@ -10,6 +10,8 @@
     export let value: GradientBrush;
     export let readonly: boolean = false;
     export let slider: GradientSlider = undefined;
+    export let isPinned: boolean = true;
+    export let disablePin: boolean = false;
 
     function dispatchStart() {
         dispatch('start', value);
@@ -22,6 +24,8 @@
     function onSpreadUpdate(e: CustomEvent<string>) {
         dispatch('update', value.withSpreadMethod(parseInt(e.target.value) as SpreadMethod));
     }
+
+    export let open: boolean = false;
 </script>
 <ColorStops
         on:start={dispatchStart}
@@ -32,8 +36,9 @@
         readonly={readonly}>
     <div class="gradient-options">
         <sp-action-group compact quiet class="very-small">
-            <overlay-trigger placement="bottom-start" type="modal" offset={-3} style="transform: translateX(-6px)">
-                <sp-action-button disabled={readonly} slot="trigger" quiet size="s" class="very-small">
+            <overlay-trigger on:sp-closed={() => open = false}
+                             placement="bottom-start" type="modal" offset={-3} style="transform: translateX(-6px)">
+                <sp-action-button on:click={() => open = true} disabled={readonly} slot="trigger" quiet size="s" class="very-small">
                     <sp-icon name="workflow:Settings" slot="icon"></sp-icon>
                 </sp-action-button>
                 <sp-popover dialog slot="click-content" open style="--spectrum-popover-dialog-padding: 6px; --spectrum-popover-dialog-min-width: 0px">
@@ -42,6 +47,11 @@
                     </div>
                 </sp-popover>
             </overlay-trigger>
+            <sp-action-button on:click={() => isPinned = !isPinned}
+                              selected={disablePin ? false : isPinned}
+                              title="{isPinned ? 'Absolute position' : 'Relative position'}" size="s" disabled={readonly || disablePin}>
+                <sp-icon slot="icon" name="{isPinned || disablePin ? 'workflow:PinOn' : 'workflow:PinOff'}"></sp-icon>
+            </sp-action-button>
             <sp-action-button on:click={e => slider.reverseStops(e.altKey)} title="Reverse color stops" size="s" disabled={readonly}>
                 <sp-icon slot="icon" name="expr:switch-horizontal"></sp-icon>
             </sp-action-button>

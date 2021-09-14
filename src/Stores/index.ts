@@ -14,41 +14,12 @@
  * limitations under the License.
  */
 
-/*
- What we need to know globally
-
- - current tool
- - current project
-    - current selection: hash, activeElement, selectionList, selectionInfo
-    - current keyframeSelection: ...
-    - current document
-        - unit of measure
-    - current state info: canUndo, canRedo
-    - current time
-    - recording status (isRecording)
- - canvas engine
-    - viewBox: zoom level
-    - global properties: last used fill, stroke, ...
- - play status: if app is in play mode
- - current region: focused region of the app (canvas, timeline, ...) - used to handle keystrokes
- - app preferences (saved to local-storage)
-    - theme: dark, light, auto
-    - guides: show/hide, lock
-    - grid: show/hide
-    - ruler: show/hide
-    - high-quality: enabled/disabled
-    - snapping
-        - enabled/disabled
-        - enabled modes: grid, guides, pixel, document, object, points
- - current theme: dark or light (auto is resolved)
-*/
-
 export * from "./Tool";
-export * from "./Theme";
 export * from "./Canvas";
 export * from "./Project";
 export * from "./Time";
 export * from "./App";
+export {AppSettings} from "./utils";
 
 
 

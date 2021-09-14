@@ -29,6 +29,7 @@
             selected={$CurrentKeyframeSelection.areKeyframesSelected(keyframe, keyframes[index + 1])}
             start={keyframe.offset}
             end={keyframes[index + 1]?.offset}
+            title={keyframe.easing?.title || 'Linear'}
     />
 {/each}
 

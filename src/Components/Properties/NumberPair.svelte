@@ -63,7 +63,7 @@
 />
 <PropertyAction>
     {#if showProportionsIcon}
-        <IconToggle title="Keep proportions" bind:value={proportions} disabled={readonly} />
+        <IconToggle title="Keep proportions" bind:value={proportions} disabled={readonly || disabled} />
     {:else}
         <slot />
     {/if}

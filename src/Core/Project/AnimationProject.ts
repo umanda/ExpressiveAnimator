@@ -23,6 +23,7 @@ import type {State} from "@zindex/canvas-engine";
 import type {AnimatorSource} from "../Animation";
 import {clamp} from "@zindex/canvas-engine";
 import type {AnimationDocument} from "./AnimationDocument";
+import {EasingManager} from "../Animation";
 
 export const MAX_TIME = 1000000 * 1000;
 
@@ -31,6 +32,7 @@ export class AnimationProject extends Project<AnimationMiddleware, AnimationStat
     private _isRecording: boolean = false;
     private _keyframeSelection: KeyframeSelection = new KeyframeSelection();
     private _animatorSource: AnimatorSource;
+    public readonly easingManager: EasingManager = new EasingManager();
 
     constructor(source: AnimatorSource) {
         super();

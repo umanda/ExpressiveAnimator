@@ -1,5 +1,6 @@
 <script lang="ts">
-    import {CurrentTool} from "../../Stores";
+    import {CurrentProject, CurrentTool} from "../../Stores";
+    import {getTitle} from "./buttons";
     import type {ToolButtonDef} from "./buttons";
 
     export let disabled: boolean = false;
@@ -22,7 +23,11 @@
         if (readonly) {
             return;
         }
-        CurrentTool.change(el.getAttribute('data-tool-name'));
+        const name = el.getAttribute('data-tool-name');
+        if ($CurrentTool.name !== name) {
+            CurrentTool.change(name);
+            $CurrentProject.engine?.focus();
+        }
     }
 
     function getCurrentTool(buttons: any[], name: string) {
@@ -32,26 +37,36 @@
 <overlay-trigger type="modal" placement="{placement}" disabled={disabled}
                  on:sp-opened={() => open = true}
                  on:sp-closed={() => open = false}
+                 offset={-6}
 >
-    <sp-action-button on:click={e => !open && selectTool(e)} title={current.title}
+    <sp-action-button on:click={e => !open && selectTool(e)} title={getTitle(current)}
                       data-tool-name="{current.tool}" selected={!disabled && $CurrentTool.name === current.tool}
                       readonly={readonly} disabled={disabled} hold-affordance slot="trigger">
         <sp-icon size="s" name="{current.icon}" slot="icon"></sp-icon>
     </sp-action-button>
     <sp-popover slot="longpress-content" tip style="--spectrum-popover-dialog-min-width: 0;">
-        <sp-action-group quiet style="padding: var(--spectrum-global-dimension-size-50)">
+        <sp-menu style="width: var(--spectrum-global-dimension-size-2000)">
             {#each buttons as button (button.tool)}
                 {#if current !== button}
-                    <sp-action-button readonly={readonly} disabled={button.disabled} on:click={selectTool} data-tool-name="{button.tool}" title={button.title}>
+                    <sp-menu-item disabled={readonly || button.disabled} on:click={selectTool} data-tool-name="{button.tool}">
                         <sp-icon size="s" name={button.icon} slot="icon"></sp-icon>
-                    </sp-action-button>
+                        {button.title}
+                        {#if button.shortcut}
+                            <span class="shortcut-letter" slot="value">{button.shortcut}</span>
+                        {/if}
+                    </sp-menu-item>
                 {/if}
             {/each}
-        </sp-action-group>
+        </sp-menu>
     </sp-popover>
 </overlay-trigger>
 <style>
     overlay-trigger, sp-action-button {
         touch-action: none;
+    }
+    .shortcut-letter {
+        color: var(--spectrum-global-color-gray-700);
+        text-align: center;
+        min-width: var(--spectrum-listitem-text-size);
     }
 </style>

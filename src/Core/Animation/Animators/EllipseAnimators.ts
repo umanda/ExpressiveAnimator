@@ -26,7 +26,7 @@ export const EllipseAnimators: ElementAnimatorMap<EllipseElement> = {
         title: 'Width',
         type: 'ellipse',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('width', 'ellipse');
         }
     },
     height: {
@@ -34,7 +34,7 @@ export const EllipseAnimators: ElementAnimatorMap<EllipseElement> = {
         title: 'Height',
         type: 'ellipse',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('height', 'ellipse');
         }
     },
 }

@@ -1,6 +1,9 @@
 <svelte:options immutable={true} />
-<div style="width: 32px; height: 32px">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 110.6" width="32" height="32">
+<script lang="ts">
+    export let large: boolean = false;
+</script>
+<div class="logo" class:large={large}>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 110.6">
         <title>Expressive Animator</title>
         <g>
             <rect y="14.6" width="96" height="96" rx="20" fill="#6e25f2"/>
@@ -26,4 +29,33 @@
             </g>
         </g>
     </svg>
+    {#if large}
+        <div>
+            <span style="font-size: 16px">Expressive</span>
+            <span style="font-size: 20px; font-weight: bold; text-transform: uppercase">Animator</span>
+        </div>
+    {/if}
 </div>
+<style>
+    .logo, .logo > svg {
+        width: 32px;
+        height: 32px;
+    }
+    .logo.large, .logo.large > svg {
+        width: 48px;
+        height: 48px;
+    }
+
+    .logo.large {
+        user-select: none;
+        pointer-events: none;
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+        letter-spacing: 2px;
+    }
+
+    .logo.large > svg {
+        flex-shrink: 0;
+    }
+</style>

@@ -9,6 +9,7 @@
     import SpNumberField from "../../../Controls/SpNumberField.svelte";
     import IconToggle from "../IconToggle.svelte";
     import {createEventDispatcher} from "svelte";
+    import TextProperty from "../TextProperty.svelte";
 
     const dispatch = createEventDispatcher();
 
@@ -44,7 +45,7 @@
         }
 
         return value
-            .map(v => formatNumber((v < 0 ? -v: v) * scale, 4))
+            .map(v => formatNumber((v < 0 ? -v : v) * scale, 4))
             .join(percent ? '%, ' : ', ') + (percent ? '%' : '');
     }
 
@@ -155,15 +156,6 @@
         <IconToggle title="Use percents" disabled={value.pathLength == null} bind:value={dashesPercent} small checkedIcon="expr:percent" uncheckedIcon="expr:percent" />
     </PropertyItem>
     <PropertyItem title="Path length">
-        <div class="path-length">{formatPathLength(value.pathLength, unit)}</div>
+        <TextProperty selectable>{formatPathLength(value.pathLength, unit)}</TextProperty>
     </PropertyItem>
 </PropertyGroup>
-<style>
-    .path-length {
-        flex: 1;
-        text-align: right;
-        user-select: text;
-        padding-top: var(--spectrum-global-dimension-size-50);
-        font-size: var(--spectrum-global-dimension-font-size-75);
-    }
-</style>

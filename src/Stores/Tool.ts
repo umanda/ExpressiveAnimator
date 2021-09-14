@@ -25,15 +25,21 @@ import {
     PolyTool,
     LineTool,
     RegularPolygonTool,
-    ZoomTool
+    ZoomTool,
 } from "@zindex/canvas-engine";
-import {SelectionTool, TransformTool} from "../Core";
+import {SelectionTool, TransformTool, PathTool, PenTool, ColorPickerTool, GradientTool} from "../Core";
 import type {Tool} from "@zindex/canvas-engine";
+import {IsFillSelected, IsGradientPinned} from "./App";
+import {CurrentKeyframeSelection, CurrentProject, notifyKeyframeSelectionChanged} from "./Project";
 
 export const Tools = {
     pan: new PanTool(),
+    zoom: new ZoomTool(),
     selection: new SelectionTool(),
-    transform: new TransformTool(),
+    transform: new TransformTool(CurrentKeyframeSelection, notifyKeyframeSelectionChanged),
+    gradient: new GradientTool(IsFillSelected, IsGradientPinned),
+    path: new PathTool(),
+    'color-picker': new ColorPickerTool(IsFillSelected, IsGradientPinned, () => CurrentProject.forceUpdate()),
 
     // shape
     rect: new RectangleTool(),
@@ -42,8 +48,7 @@ export const Tools = {
     star: new StarTool(),
     poly: new PolyTool(),
     line: new LineTool(),
-    zoom: new ZoomTool(),
-    // TODO: add other tools
+    pen: new PenTool(),
 };
 
 type CurrentToolType = Readable<Tool> & {

@@ -1,6 +1,7 @@
 <script lang="ts">
     import type {MenuItemDef} from "./utils";
-    import Shortcut from "./Shortcut.svelte";
+    import type {Popover} from "@spectrum-web-components/bundle";
+    import {getKeys} from "./utils";
     import {createEventDispatcher} from "svelte";
 
     const dispatch = createEventDispatcher();
@@ -9,7 +10,7 @@
     export let open: boolean = false;
     export let level: number = 0;
 
-    let popover;
+    export let popover: Popover = undefined;
 
     function onAction(item: MenuItemDef) {
         if (!item.disabled && !item.children) {
@@ -38,9 +39,9 @@
                     {#if item.children}
                         <sp-icon slot="value" disabled={item.disabled} name="workflow:ChevronRight"></sp-icon>
                     {:else if item.shortcut}
-                        <kbd slot="value">
-                            <Shortcut value={item.shortcut} />
-                        </kbd>
+                        <div class="shortcut" slot="value">
+                            {getKeys(item.shortcut)}
+                        </div>
                     {/if}
                     {#if !item.disabled && item.children}
                         <svelte:self on:action={onActionEvent} items={item.children} open={true} level={level + 1} />
@@ -51,15 +52,27 @@
     </sp-menu>
 </sp-popover>
 <style global>
+    div.shortcut {
+        min-width: max-content;
+        height: 18px;
+        font-size: smaller;
+        display: flex;
+        align-items: center;
+    }
+    sp-menu-item:not([disabled]) > div.shortcut {
+        color: var(--spectrum-global-color-gray-700);
+    }
+
     .cascade-menu-popover {
         z-index: 5;
         overflow: visible;
         clip-path: none !important;
+        min-width: 200px;
     }
 
     .cascade-menu {
         overflow: visible;
-        min-width: 180px;
+        min-width: 200px;
     }
 
     .cascade-menu sp-menu-item > sp-popover.cascade-menu-popover {

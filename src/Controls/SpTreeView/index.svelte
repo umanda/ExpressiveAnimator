@@ -72,8 +72,23 @@
             return;
         }
 
-        if (selection.toggle(element, e.shiftKey)) {
-            dispatch('selection');
+        if (e.shiftKey) {
+            if (selection.toggle(element, true)) {
+                dispatch('selection');
+            }
+        } else if (e.altKey && !selection.isEmpty) {
+            if (selection.rangeSelect(selection.activeElement, element)) {
+                dispatch('selection');
+            }
+        } else {
+            if (selection.isSelected(element)) {
+                if (selection.activeElement !== element) {
+                    selection.activeElement = element;
+                    dispatch('selection');
+                }
+            } else if (selection.select(element, false)) {
+                dispatch('selection');
+            }
         }
     }
 
@@ -175,10 +190,13 @@
 
         return MoveElementMode.AFTER;
     }
+
+    let children: Element[];
+    $: children = Array.from(document.children(reverse));
 </script>
 {#if document != null}
     <ul class="spectrum-TreeView" class:is-dragged={dragging} on:dragstart={onDragStart}>
-        {#each Array.from(document.children(reverse)) as child (child.id)}
+        {#each children as child (child.id)}
             <SpTreeViewItem
                     on:hide={onHide}
                     on:lock={onLock}

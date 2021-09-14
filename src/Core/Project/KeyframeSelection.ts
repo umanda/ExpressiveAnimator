@@ -33,6 +33,10 @@ export class KeyframeSelection implements Disposable {
         return this._selection.size === 0;
     }
 
+    get length(): number {
+        return this._selection.size;
+    }
+
     dispose() {
         this._selection = null;
         this._document = null;
@@ -69,6 +73,10 @@ export class KeyframeSelection implements Disposable {
             return this.clear();
         }
 
+        if (this._selection.size === 0) {
+            return false;
+        }
+
         let changed: boolean = false;
 
         const animation = this._document.animation;
@@ -81,6 +89,9 @@ export class KeyframeSelection implements Disposable {
                 for (const keyframe of animation.keyframes) {
                     if (this._selection.has(keyframe.id)) {
                         this._selection.delete(keyframe.id);
+                        if (this._selection.size === 0) {
+                            return true;
+                        }
                         changed = true;
                     }
                 }
@@ -170,5 +181,4 @@ export class KeyframeSelection implements Disposable {
     resolveSelectedKeyframes(): {animations: Set<Animation<any>>, keyframes: Set<Keyframe<any>>} | null {
         return this._document?.animation?.resolveAnimationsAndKeyframes(this._selection);
     }
-
 }

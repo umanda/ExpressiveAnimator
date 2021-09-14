@@ -27,6 +27,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         flex: 1;
+        color: var(--spectrum-alias-label-text-color);
     }
 
     .timeline-property-item > span.is-selected {

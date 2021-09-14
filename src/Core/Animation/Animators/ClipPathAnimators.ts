@@ -17,17 +17,17 @@
 import type {ElementAnimatorMap} from "../Animator";
 import type {ClipPathElement} from "@zindex/canvas-engine";
 import {ElementAnimators, TransformAnimators} from "./CommonAnimators";
-import {PathAnimation} from "./CommonAnimations";
+import {PathNodesAnimation} from "./CommonAnimations";
 
 export const ClipPathAnimators: ElementAnimatorMap<ClipPathElement> = {
     ...(ElementAnimators as ElementAnimatorMap<ClipPathElement>),
     ...(TransformAnimators as ElementAnimatorMap<ClipPathElement>),
-    path: {
-        id: 'path',
-        title: 'Clip Path',
+    nodes: {
+        id: 'nodes',
+        title: 'Morph',
         type: 'clip-path',
         create() {
-            return new PathAnimation();
+            return new PathNodesAnimation('nodes', 'clip-path');
         }
     }
 }

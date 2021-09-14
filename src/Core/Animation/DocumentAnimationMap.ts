@@ -15,9 +15,10 @@
  */
 
 import type {Document, Element} from "@zindex/canvas-engine";
-import type {Cloneable, Disposable, WritableKeys} from "@zindex/canvas-engine";
+import type {Cloneable, Disposable, WritableKeys, JSONSerializable} from "@zindex/canvas-engine";
 import type {Animation} from "./Animation";
 import type {Keyframe} from "./Keyframe";
+import type {AnimationProject, KeyframeSelection} from "../Project";
 import {clamp} from "@zindex/canvas-engine";
 
 export type AnimatedProperties<E extends Element> = {
@@ -39,9 +40,16 @@ export enum AnimationMode {
     LoopReverse,
 }
 
-type AnimatedValueSetter = <E extends Element, K extends WritableKeys<E>, V extends E[K]>(element: E, property: K, value: V) => boolean;
+type AnimatedValueSetter = <E extends Element, K extends WritableKeys<E>, V extends E[K]>(
+    element: E,
+    property: K,
+    value: V,
+    animation: Animation<E[K]>,
+    time: number,
+    priority?: Set<Keyframe<V>>
+) => boolean;
 
-export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimation> {
+export class DocumentAnimationMap implements Disposable, Cloneable<DocumentAnimationMap>, JSONSerializable {
     private _startTime: number;
     private _endTime: number;
     private _mode: AnimationMode;
@@ -56,6 +64,73 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         this._endTime = endTime;
         this._mode = mode;
         this._map = animations ?? new Map();
+    }
+
+    get isEmpty(): boolean {
+        return this._map.size === 0;
+    }
+
+    static create(document: Document, project: AnimationProject, json): DocumentAnimationMap {
+        let animations = null;
+
+        if (json.animations) {
+            const source = project.animatorSource;
+
+            animations = new Map();
+            for (const [id, list] of Object.entries(json.animations)) {
+                const element = document.getElementById(id);
+                if (!element) {
+                    continue;
+                }
+                const properties = {};
+                for (const data of (list as Animation<any>[])) {
+                    if (data.type != null && data.type !== element.type) {
+                        continue;
+                    }
+
+                    const animation = source.createAnimation(element, data.property as any);
+                    if (!animation) {
+                        continue;
+                    }
+
+                    // mark as disabled if needed
+                    if (data.disabled) {
+                        animation.disabled = true;
+                    }
+
+                    // add keyframes
+                    if (data.keyframes) {
+                        animation.keyframes.push(...data.keyframes);
+                    }
+
+                    properties[animation.property] = animation;
+                }
+
+                if (Object.keys(properties).length > 0) {
+                    animations.set(id, properties);
+                }
+            }
+        }
+
+        return new DocumentAnimationMap(document, json.startTime, json.endTime, json.mode, animations);
+    }
+
+    toJSON() {
+        let animations = null;
+
+        if (this._map.size > 0) {
+            animations = {};
+            for (const [id, properties] of this._map) {
+                animations[id] = Object.values(properties);
+            }
+        }
+
+        return {
+            startTime: this._startTime,
+            endTime: this._endTime,
+            mode: this._mode,
+            animations,
+        }
     }
 
     get document(): Document {
@@ -100,7 +175,7 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
                 time = time % this._endTime;
                 break;
             case AnimationMode.LoopReverse:
-                // TODO:
+                // TODO: finish and use animation map time
                 break;
         }
 
@@ -111,6 +186,34 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return this._map.entries();
     }
 
+    * getAllAnimations(): Generator<[string, Animation<any>]> {
+        for (const [id, properties] of this._map.entries()) {
+            for (const animation of Object.values(properties)) {
+                yield [id, animation];
+            }
+        }
+    }
+
+    * getSelectedKeyframes(selection: KeyframeSelection): Generator<{animation: Animation<any>, selected: Keyframe<any>[]}> {
+        if (selection.isEmpty || this.isEmpty) {
+            return;
+        }
+
+        for (const [_, animation] of this.getAllAnimations()) {
+            if (animation.disabled) {
+                continue;
+            }
+            const selected = [];
+            for (const keyframe of animation.keyframes) {
+                if (selection.isKeyframeSelected(keyframe)) {
+                    selected.push(keyframe);
+                }
+            }
+            if (selected.length > 0) {
+                yield {animation, selected};
+            }
+        }
+    }
 
     *getAnimatedElements<E extends Element>(): Generator<[E, AnimatedProperties<E>]> {
         let element: E;
@@ -122,10 +225,38 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         }
     }
 
+    updateAnimatedProperty<E extends Element, K extends WritableKeys<E>>(time: number, element: E, property: K, setter: AnimatedValueSetter): boolean {
+        if (!this._map.has(element.id)) {
+            return false;
+        }
+
+        const properties = this._map.get(element.id);
+        if (!(property in properties)) {
+            return false;
+        }
+
+        const animation = properties[property];
+
+        if (animation.disabled) {
+            // inform animation is disabled
+            return setter(element, property, null, animation, time);
+        }
+
+        const value = animation.getValueAtOffset(time);
+
+        if (value === null) {
+            // inform animation has no keyframes
+            return setter(element, property, null, animation, time);
+        }
+
+        // try to update
+        return setter(element, property, value, animation, time)
+    }
+
     /**
      * Updates the property values for animated documents
      */
-    updateAnimatedProperties(time: number, setter: AnimatedValueSetter, filter?: {animations: Set<Animation<any>>, keyframes: Set<Keyframe<any>>}): boolean {
+    updateAnimatedProperties(time: number, setter: AnimatedValueSetter, filter?: {animations: Set<Animation<any>>, keyframes?: Set<Keyframe<any>>}): boolean {
         if (this._map.size === 0) {
             return false;
         }
@@ -144,18 +275,29 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
             }
 
             for ([property, animation] of Object.entries(properties)) {
-                if (animation.disabled || (filter && !filter.animations.has(animation))) {
+                if (filter && !filter.animations.has(animation)) {
+                    continue;
+                }
+                if (animation.disabled) {
+                    // inform animation is disabled
+                    if (setter(element, property, null, animation, time)) {
+                        updated = true;
+                    }
                     continue;
                 }
 
                 value = animation.getValueAtOffset(time, filter?.keyframes);
 
                 if (value === null) {
-                    // no keyframes, ignore
+                    // inform animation has no keyframes
+                    if (setter(element, property, null, animation, time)) {
+                        updated = true;
+                    }
                     continue;
                 }
 
-                if (setter(element, property, value)) {
+                // try to update
+                if (setter(element, property, value, animation, time, filter?.keyframes)) {
                     updated = true;
                 }
             }
@@ -164,7 +306,7 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return updated;
     }
 
-    removeEmptyAnimations(): boolean {
+    removeEmptyAnimations(callback?: (id: string, property: string) => any): boolean {
         let changed: boolean = false;
 
         for (const [id, properties] of this._map.entries()) {
@@ -172,6 +314,9 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
                 if (!properties[property].hasKeyframes) {
                     delete properties[property];
                     changed = true;
+                    if (callback) {
+                        callback(id, property);
+                    }
                 }
             }
             if (Object.keys(properties).length === 0) {
@@ -180,6 +325,10 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         }
 
         return changed;
+    }
+
+    removeSpecificAnimations(element: Element): boolean {
+        return false;
     }
 
     /**
@@ -198,8 +347,8 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return changed;
     }
 
-    clone(document: Document): DocumentAnimation {
-        return new DocumentAnimation(document || this._document, this._startTime, this._endTime, this._mode, this.cloneAnimationMap());
+    clone(document: Document): DocumentAnimationMap {
+        return new DocumentAnimationMap(document || this._document, this._startTime, this._endTime, this._mode, this.cloneAnimationMap());
     }
 
     protected cloneAnimationMap(): AnimationMap<any> {
@@ -231,22 +380,38 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return this._map.has(element.id) ? this._map.get(element.id) : null;
     }
 
-    removeAnimatedProperties(element: Element): boolean {
-        if (element.document !== this._document) {
+    removeAnimatedProperties(element: Element, properties?: Iterable<string>): boolean {
+        if (element.document !== this._document || !this._map.has(element.id)) {
             return false;
         }
-        if (this._map.has(element.id)) {
+        if (properties == null) {
             this._map.delete(element.id);
             return true;
         }
-        return false;
+
+        const animated = this._map.get(element.id);
+
+        let changed: boolean = false;
+
+        for (const property of properties) {
+            if (property in animated) {
+                delete animated[property];
+                changed = true;
+            }
+        }
+
+        if (changed && Object.keys(animated).length === 0) {
+            this._map.delete(element.id);
+        }
+
+        return changed;
+    }
+
+    hasAnimatedProperties(element: Element): boolean {
+        return this._map.has(element.id);
     }
 
     isAnimated(element: Element): boolean {
-        if (element.document !== this._document) {
-            return false;
-        }
-
         const properties = this.getAnimatedProperties(element);
         if (properties == null) {
             return false;
@@ -259,6 +424,19 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         }
 
         return false;
+    }
+
+    isPropertyAnimated(element: Element, property: string, minKeyframes: number = 0): boolean {
+        if (element.document !== this._document || !this._map.has(element.id)) {
+            return false;
+        }
+
+        const properties = this._map.get(element.id);
+        if (!(property in properties)) {
+            return false;
+        }
+
+        return !properties[property].disabled && properties[property].keyframes.length >= minKeyframes;
     }
 
     *allAnimations(): Generator<Animation<any>> {
@@ -354,8 +532,34 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
         return true;
     }
 
-    addAnimation<E extends Element, P extends  WritableKeys<E>>(element: E, property: P, animation: Animation<E[P]>): boolean {
+    copyAnimations<E extends Element>(src: E, dst: E): boolean {
+        if (src.type !== dst.type) {
+            return false;
+        }
+
+        const properties = this.getAnimatedProperties(src);
+
+        if (properties == null) {
+            return false;
+        }
+
+        let added: boolean = false;
+
+        for (const animation of Object.values(properties) as Animation<any>[]) {
+            if (this.addAnimation(dst, animation.clone(true))) {
+                added = true;
+            }
+        }
+
+        return added;
+    }
+
+    addAnimation<E extends Element>(element: E, animation: Animation<E[WritableKeys<E>]>): boolean {
         if (element.document !== this._document) {
+            return false;
+        }
+
+        if (!(animation.property in element) || animation.type != null && animation.type !== element.type) {
             return false;
         }
 
@@ -368,8 +572,54 @@ export class DocumentAnimation implements Disposable, Cloneable<DocumentAnimatio
             this._map.set(element.id, properties);
         }
 
-        properties[property] = animation;
+        properties[animation.property] = animation;
 
         return true;
+    }
+
+    fitAllKeyframes(start?: number, end?: number): boolean {
+        if (start == null) {
+            start = this.startTime;
+        }
+
+        if (end == null) {
+            end = this.endTime;
+        }
+
+        let changed: boolean = false;
+
+        const toRemove: string[] = [];
+
+        for (const [id, properties] of this._map.entries()) {
+            for (const [property, animation] of Object.entries(properties)) {
+                const cut = animation.fit(start, end);
+                if (cut === animation) {
+                    // nothing happened
+                    continue;
+                }
+
+                changed = true;
+
+                if (cut == null) {
+                    toRemove.push(property);
+                    continue;
+                }
+
+                properties[property] = cut;
+            }
+
+            if (toRemove.length > 0) {
+                for (const property in toRemove) {
+                    delete properties[property];
+                }
+                toRemove.splice(0);
+
+                if (Object.keys(properties).length === 0) {
+                    this._map.delete(id);
+                }
+            }
+        }
+
+        return changed;
     }
 }

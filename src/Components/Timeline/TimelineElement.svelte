@@ -1,5 +1,5 @@
 <script lang="ts">
-    import {getElementIcon, getElementTitle} from "../Mapping";
+    import {getElementIcon, getElementTitle} from "../../Core";
     import type {Element} from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
 
@@ -10,6 +10,7 @@
     export let selected: boolean = false;
 </script>
 <div class="timeline-item is-alt timeline-element-item"
+     data-element-id="{element.id}"
      on:click={e => dispatch('select', {element, multiple: e.shiftKey})}
      class:is-disabled={disabled}
      class:is-selected={selected}>
@@ -29,6 +30,7 @@
     }
 
     .timeline-element-item > span {
+        font-weight: bolder;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;

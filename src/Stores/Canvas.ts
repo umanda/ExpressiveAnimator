@@ -14,31 +14,19 @@
  * limitations under the License.
  */
 
-import {writable} from "svelte/store";
 import {GlobalElementProperties} from "@zindex/canvas-engine";
 import type {SnappingOptions} from "@zindex/canvas-engine";
+import {writable} from "svelte/store";
+import {setting} from "./utils";
 
 export const CanvasEngineState = {
-    showGuides: writable<boolean>(true),
-    lockGuides: writable<boolean>(false),
-    showRuler: writable<boolean>(true),
-    showGrid: writable<boolean>(false),
-    showGridToBack: writable<boolean>(false),
-    highQuality: writable<boolean>(true),
-    snapping: writable<SnappingOptions>({
-        // Global flag
-        enabled: false,
-        // Individual flags
-        pixel: false,
-        grid: false,
-        guides: true,
-
-        bounds: true,
-        points: false,
-
-        contours: false,
-        tolerance: 10,
-    }),
+    showGuides: setting<boolean>("canvas", "showGuides"),
+    lockGuides: setting<boolean>("canvas", "lockGuides"),
+    showRuler: setting<boolean>("canvas", "showRuler"),
+    showGrid: setting<boolean>("canvas", "showGrid"),
+    showGridToBack: setting<boolean>("canvas", "showGridToBack"),
+    highQuality: setting<boolean>("canvas", "highQuality"),
+    snapping: setting<SnappingOptions>("canvas", "snapping"),
 };
 
 export const CurrentCanvasZoom = writable<number>(1);

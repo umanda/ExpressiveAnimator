@@ -18,14 +18,14 @@ import {writable, derived} from 'svelte/store';
 import type {Readable, Writable} from 'svelte/store';
 import type {
     AnimationProject,
-    AnimationState,
     KeyframeSelection,
-    DocumentAnimation,
-    AnimationDocument
+    DocumentAnimationMap,
+    AnimationDocument,
 } from "../Core";
 import type {
     Element,
     Selection,
+    Rectangle,
 } from "@zindex/canvas-engine";
 import {createGenIdStore} from "./utils";
 
@@ -42,16 +42,15 @@ type CurrentProjectDef = Writable<AnimationProject> & {
 
 const animationGenId = createGenIdStore();
 const propertiesGenId = createGenIdStore();
-const stateGenId = createGenIdStore();
 const selectionGenId = createGenIdStore();
 const keyframeSelectionGenId = createGenIdStore();
 //const documentGenId = createGenIdStore();
 
 export const notifyAnimationChanged = animationGenId.invalidate;
 export const notifyPropertiesChanged = propertiesGenId.invalidate;
-export const notifyStateChanged = stateGenId.invalidate;
 export const notifySelectionChanged = selectionGenId.invalidate;
 export const notifyKeyframeSelectionChanged = keyframeSelectionGenId.invalidate;
+
 
 export const CurrentProject: CurrentProjectDef = {
     subscribe: project.subscribe,
@@ -98,15 +97,11 @@ export const CurrentSelection = derived<[Readable<AnimationProject>, Readable<nu
     return $project ? $project.selection : null;
 });
 
-export const CurrentProjectState = derived<[Readable<AnimationProject>, Readable<number>], AnimationState>([project, stateGenId], ([$project]) => {
-    return $project ? ($project.state as AnimationState) : null;
-});
-
 export const CurrentKeyframeSelection = derived<[Readable<AnimationProject>, Readable<number>], KeyframeSelection>([project, keyframeSelectionGenId], ([$project]) => {
     return $project ? $project.keyframeSelection : null;
 });
 
-export const CurrentSelectedElement = derived<[Readable<AnimationSelection>, Readable<number>, Readable<number>], Element>([CurrentSelection, propertiesGenId, stateGenId], ([$selection]) => {
+export const CurrentSelectedElement = derived<[Readable<AnimationSelection>, Readable<number>], Element>([CurrentSelection, propertiesGenId], ([$selection]) => {
     return $selection ? $selection.activeElement : null;
 });
 
@@ -116,6 +111,6 @@ export const CurrentDocument = derived<Readable<AnimationProject>, AnimationDocu
 
 export const CurrentNumberUnit = derived<Readable<AnimationDocument>, string>(CurrentDocument, $document => ($document as any)?.unit || 'px');
 
-export const CurrentDocumentAnimation = derived<[Readable<AnimationDocument>, Readable<number>], DocumentAnimation>([CurrentDocument, animationGenId], ([$document]): DocumentAnimation => {
+export const CurrentDocumentAnimation = derived<[Readable<AnimationDocument>, Readable<number>], DocumentAnimationMap>([CurrentDocument, animationGenId], ([$document]): DocumentAnimationMap => {
     return $document ? $document.animation : null;
 });

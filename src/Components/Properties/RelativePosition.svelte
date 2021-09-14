@@ -10,10 +10,29 @@
     export let value: Point;
     export let readonly: boolean = false;
     export let bounds: Rectangle = null;
-    const properties = {
+    export let absolute: boolean = true;
+
+    const absProps = {
         x: {label: 'x', format: 'decimal'},
         y: {label: 'y', format: 'decimal'},
     };
+    const relProps = {
+        x: {label: 'x', format: 'percent'},
+        y: {label: 'y', format: 'percent'},
+    };
+
+    let properties = absProps;
+    let computedValue: Point;
+
+    $: {
+        if (absolute || bounds == null) {
+            computedValue = value;
+            properties = absProps;
+        } else {
+            computedValue = bounds.getRelativePoint(value.x, value.y);
+            properties = relProps;
+        }
+    }
 
     function onStart() {
         dispatch('start', value);
@@ -30,9 +49,13 @@
     }
 
     function onUpdate(e: CustomEvent<PointStruct>) {
-        dispatch('update', Point.fromObject(e.detail));
+        if (absolute || bounds == null) {
+            dispatch('update', Point.fromObject(e.detail));
+        } else {
+            dispatch('update', bounds.getAbsolutePoint(e.detail.x, e.detail.y));
+        }
     }
 </script>
-<NumberPair on:start={onStart} on:input={onUpdate} on:end readonly={readonly} properties={properties} value={value}>
+<NumberPair on:start={onStart} on:input={onUpdate} on:end readonly={readonly} properties={properties} value={computedValue}>
     <SidePosition disabled={readonly || bounds == null} on:input={onSide} icon="expr:center-object-origin" />
 </NumberPair>

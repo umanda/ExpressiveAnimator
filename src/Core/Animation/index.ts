@@ -16,7 +16,7 @@
 
 export * from "./Animation";
 export * from "./Animator";
-export * from "./DocumentAnimation";
+export * from "./DocumentAnimationMap";
 export * from "./Easing";
 export * from "./Keyframe";
 export * from "./Interpolation";

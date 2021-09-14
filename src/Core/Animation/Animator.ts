@@ -70,8 +70,8 @@ export class AnimatorSource {
         }
     }
 
-    getAnimator<E extends Element, K extends WritableKeys<E>>(element: E, property: K): Animator<E, K> | null {
-        const type = element.type;
+    getAnimator<E extends Element, K extends WritableKeys<E>>(element: E | string, property: K): Animator<E, K> | null {
+        const type = typeof element === 'string' ? element : element.type;
 
         if (!this._source.has(type)) {
             return null;
@@ -84,6 +84,18 @@ export class AnimatorSource {
         }
 
         return list[property];
+    }
+
+    * specificAnimatorProperties(type: string): Generator<string> {
+        if (!this._source.has(type)) {
+            return;
+        }
+
+        for (const item of Object.entries(this._source.get(type))) {
+            if (item[1].type != null) {
+                yield item[0] as string;
+            }
+        }
     }
 
     isAnimatable<E extends Element, K extends WritableKeys<E>>(element: E, property: K): boolean {
@@ -99,4 +111,5 @@ export class AnimatorSource {
         }
         return this.getAnimator(element, property)?.create();
     }
+
 }

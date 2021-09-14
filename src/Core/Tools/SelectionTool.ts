@@ -19,24 +19,13 @@ import {
     AxisPointPosition,
     BaseTool,
     Cursor,
-    DefaultPen,
     invertPosition,
-    Pen,
     Point,
     Position,
     ProjectEvent,
     Rectangle,
-    SolidBrush
+    ToolUtils,
 } from "@zindex/canvas-engine";
-import {
-    drawBBoxWrapper,
-    drawElementBoundingBox,
-    drawElementOutline,
-    drawSelectionRectangle,
-    getElementHandle,
-    getGuideLine,
-    getHoverGuide
-} from "./Helper";
 import {KeyframeCounter} from "./KeyframeCounter";
 
 enum Action {
@@ -47,31 +36,89 @@ enum Action {
     RectangleSelection,
     Pan,
     Resize,
-    MoveVerticalGuide,
-    MoveHorizontalGuide
+    Guide,
+}
+
+class SelectionUtils extends ToolUtils {
+    constructor() {
+        super();
+        this.registerPen('guide-hover', 1);
+    }
+
+    drawHoveredGuide(engine: CanvasEngine, guide: Guide): void {
+        const context = engine.context;
+
+        const topLeft = engine.viewBox.matrix.inversePoint(0, 0);
+        const bottomRight = engine.viewBox.matrix.inversePoint(engine.boundingBox.width, engine.boundingBox.height);
+
+        const pen = this.getPen('guide-hover');
+
+        if (guide.isHorizontal) {
+            context.drawLine(
+                {x: topLeft.x, y:guide.position},
+                {x: bottomRight.x, y:guide.position},
+                pen
+            );
+        } else {
+            context.drawLine(
+                {x: guide.position, y: topLeft.y},
+                {x: guide.position, y: bottomRight.y},
+                pen
+            );
+        }
+    }
+
+    getHoveredGuide(engine: CanvasEngine, position: Point): Guide | null {
+        if (engine.lockGuides || !engine.showGuides) {
+            return null;
+        }
+
+        const guides = engine.document.guides;
+        if (guides.isEmpty) {
+            return null;
+        }
+
+        const tolerance = engine.dpr / engine.viewBox.zoom;
+
+        for (const guide of guides) {
+            if (guide.isHorizontal) {
+                if (Math.abs(guide.position - position.y) <= tolerance) {
+                    return guide;
+                }
+            } else {
+                if (Math.abs(guide.position - position.x) <= tolerance) {
+                    return guide;
+                }
+            }
+        }
+
+        return null;
+    }
 }
 
 export class SelectionTool extends BaseTool {
-    private selectionStart: Point = null;
-    private selectionEnd: Point = null;
-
     private position: Point = null;
     private hoverElement: Element | null = null;
-    private resizePosition: AxisPointPosition | null = null;
     private moveByMiddle: boolean = true;
 
-    protected defaultCanvasCursor: Cursor = Cursor.Arrow;
     private action: Action = Action.None;
     private changed: boolean = false;
-    private hoverGuide: Guide|null = null;
-    private hoverGuidePosition: number;
-    private guidePen: Pen = new DefaultPen();
-    private guidePenHover: Pen = new DefaultPen();
 
     private keyframeCounter: KeyframeCounter = new KeyframeCounter();
 
+    private utils: SelectionUtils = new SelectionUtils();
+
     get name(): string {
         return "selection";
+    }
+
+    get allowGuideCreation(): boolean {
+        return true;
+    }
+
+    constructor() {
+        super();
+        this.defaultCanvasCursor = Cursor.Arrow;
     }
 
     deactivate(engine: CanvasEngine) {
@@ -82,80 +129,191 @@ export class SelectionTool extends BaseTool {
         this.hoverElement = null;
         this.resizePosition = null;
         this.action = Action.None;
+        this.doMouseUp = this.doMouseMove = null;
     }
 
-    updateTheme(engine:CanvasEngine) {
-        this.guidePen.brush = SolidBrush.fromColor(engine.theme.guide);
-        this.guidePenHover.brush = SolidBrush.fromColor(engine.theme.guideHover);
+    updateTheme(engine: CanvasEngine) {
+        this.utils.updateTheme(engine.theme);
+    }
+
+    onDocumentChanged(engine: CanvasEngine) {
+        this.restoreAction(engine, engine.currentDocumentPosition);
+        this.refreshCursor(engine);
+        super.onDocumentChanged(engine);
+    }
+
+    onKeyboardStatusChange(engine: CanvasEngine, event: KeyboardEvent) {
+        if (this.isWorking) {
+            return;
+        }
+
+        if (this.hoverElement && (event.key === "Shift" || engine.keyboardStatus.eventKeyIsCtrl(event))) {
+            this.restoreAction(engine, engine.currentDocumentPosition);
+            this.refreshCursor(engine);
+            return;
+        }
     }
 
     draw(engine: CanvasEngine) {
+        this.drawTool(engine);
+        this.refreshCursor(engine);
+    }
+
+    protected restoreAction(engine: CanvasEngine, position: Point, invalidate?: boolean) {
+        let invalidateTool: boolean = false;
+
+        const guide = this.utils.getHoveredGuide(engine, position);
+
+        if (guide) {
+            invalidateTool = guide !== this.hoverGuide;
+            this.hoverGuide = guide;
+            this.action = Action.Guide;
+            this.hoverElement = null;
+            this.moveByMiddle = false;
+            this.resizePosition = null;
+        } else {
+            if (this.hoverGuide) {
+                this.hoverGuide = null;
+                invalidateTool = true;
+            }
+
+            const selection = engine.selection;
+
+            let handle: AxisPointPosition = null;
+
+            if (selection.length === 1) {
+                handle = this.utils.getElementBoxHandle(selection.activeElement, position, true);
+            }
+
+            if (handle) {
+                if (handle.x === Position.Middle && handle.y === Position.Middle) {
+                    if (!this.moveByMiddle || this.hoverElement) {
+                        invalidateTool = true;
+                    }
+                    this.moveByMiddle = true;
+                    this.resizePosition = null;
+                    this.action = Action.Move;
+                } else {
+                    if (this.moveByMiddle || this.hoverElement || !this.resizePosition || handle.x !== this.resizePosition.x || handle.y !== this.resizePosition.y) {
+                        invalidateTool = true;
+                    }
+                    this.moveByMiddle = false;
+                    this.resizePosition = {x: handle.x, y: handle.y};
+                    this.action = Action.Resize;
+                }
+                this.hoverElement = null;
+            } else {
+                if (this.moveByMiddle) {
+                    this.moveByMiddle = false;
+                    invalidateTool = true;
+                }
+
+                if (this.resizePosition != null) {
+                    this.resizePosition = null;
+                    invalidateTool = true;
+                }
+
+                const hover = this.utils.getHoveredElement(engine, position);
+
+                if (hover) {
+                    if (hover !== this.hoverElement) {
+                        this.hoverElement = hover;
+                        invalidateTool = true;
+                        this.action = Action.Hover;
+                    }
+                } else {
+                    if (this.hoverElement) {
+                        this.hoverElement = null;
+                        invalidateTool = true;
+                    }
+                    this.action = Action.None;
+                }
+            }
+        }
+
+        if (invalidate) {
+            this.invalidate();
+        } else if (invalidateTool) {
+            this.invalidateToolDrawing();
+        }
+    }
+
+    onMouseEnter(engine: CanvasEngine, event: ToolMouseEvent) {
+        if (!this.isWorking) {
+            this.restoreAction(engine, event.position);
+        }
+    }
+
+    protected refreshCursor(engine: CanvasEngine): void {
         switch (this.action) {
             case Action.Hover:
-                drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
-                this.drawTool(engine);
-                engine.cursor = this.moveByMiddle ? Cursor.ArrowMove : Cursor.ArrowSelectable;
+                if (this.moveByMiddle) {
+                    engine.cursor = Cursor.ArrowMove;
+                } else {
+                    engine.cursor = !engine.keyboardStatus.isShift && engine.selection.isSelected(this.hoverElement)
+                        ? Cursor.ArrowMove
+                        : Cursor.ArrowSelectable;
+                }
                 break;
             case Action.Select:
-                drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
-            // fall
+                engine.cursor = Cursor.ArrowMove;
+                break;
             case Action.Move:
-                this.drawTool(engine);
                 engine.cursor = Cursor.ArrowMove;
                 break;
             case Action.RectangleSelection:
-                drawSelectionRectangle(engine, this.selectionStart, this.selectionEnd);
                 engine.cursor = Cursor.Arrow;
                 break;
             case Action.Pan:
                 engine.cursor = Cursor.HandHold;
                 break;
             case Action.Resize:
-                this.drawTool(engine);
                 engine.cursor = Cursor.ArrowResize;
                 break;
-            case Action.MoveHorizontalGuide:
-                this.drawTool(engine);
-                engine.cursor = Cursor.ResizeNS;
-                break;
-            case Action.MoveVerticalGuide:
-                this.drawTool(engine);
-                engine.cursor = Cursor.ResizeEW;
+            case Action.Guide:
+                engine.cursor = this.hoverGuide.isHorizontal ? Cursor.ResizeNS : Cursor.ResizeEW;
                 break;
             default:
-                drawElementOutline(engine.context, this.hoverElement, engine.viewBox.matrix, engine.dpr);
-                this.drawTool(engine);
-                engine.cursor = this.defaultCanvasCursor;
+                engine.cursor = this.moveByMiddle ? Cursor.ArrowMove : this.defaultCanvasCursor;
                 break;
         }
     }
 
     protected drawTool(engine: CanvasEngine): void {
-        if (this.hoverGuide !== null) {
-            const [from, to] = getGuideLine(engine, this.hoverGuide);
-            engine.context.drawLine(from, to, this.hoverGuide.isHidden ? this.guidePen : this.guidePenHover);
-            return;
-        }
-        const selection = engine.selection;
-        if (selection.isEmpty) {
-            // nothing to draw
+        if (this.selectionStart != null) {
+            this.utils.drawSelectionAreaRectangle(engine, this.selectionStart, this.selectionEnd);
             return;
         }
 
         const context = engine.context;
         context.save();
-        context.multiplyMatrix(engine.viewBox.matrix);
+        context.setViewBox(engine.viewBox);
+        this.utils.setScale(engine);
 
-        // draw wrapper
-        drawBBoxWrapper(context, selection.boundingBox, engine.dpr);
+        if (this.hoverGuide != null) {
+            this.utils.drawHoveredGuide(engine, this.hoverGuide);
+            context.restore();
+            return;
+        }
 
+        const selection = engine.selection;
+
+        if (!this.isWorking && this.hoverElement && !selection.isSelected(this.hoverElement)) {
+            this.utils.drawElementOutline(context, this.hoverElement);
+        }
+
+        if (selection.isEmpty) {
+            context.restore();
+            // nothing to draw
+            return;
+        }
+
+        this.utils.drawSelectionWrapper(context, selection.boundingBox);
         if (selection.length === 1) {
-            // draw handles on active element
-            drawElementBoundingBox(context, selection.activeElement, true, true, engine.dpr);
+            this.utils.drawElementBoundingBox(context, selection.activeElement, true, true);
         } else {
-            // draw bbox on every element, without handles
             for (const element of selection) {
-                drawElementBoundingBox(context, element, false, true, engine.dpr);
+                this.utils.drawElementBoundingBox(context, element, false);
             }
         }
 
@@ -163,230 +321,243 @@ export class SelectionTool extends BaseTool {
     }
 
     onMouseHover(engine: CanvasEngine, event: ToolMouseEvent) {
-        this.moveByMiddle = false;
-
-        const guide = getHoverGuide(engine, event.position);
-
-        if (this.hoverGuide !== guide) {
-            this.hoverGuide = guide;
-            this.invalidateToolDrawing();
-            if (guide) {
-                this.action = guide.isHorizontal ? Action.MoveHorizontalGuide : Action.MoveVerticalGuide;
-                return;
-            }
-            this.action = Action.None;
-        }
-
-        // Handle possible resize
-        if (engine.selection.length === 1) {
-            // Copy this
-            const handle = getElementHandle(engine.selection.activeElement, event.position, engine.viewBox.getLineWidth());
-            if (handle) {
-                if (handle.x === Position.Middle && handle.y === Position.Middle) {
-                    this.moveByMiddle = true;
-                    this.action = Action.Move;
-                    this.resizePosition = null;
-                } else {
-                    this.resizePosition = {x: handle.x, y: handle.y};
-                    this.action = Action.Resize;
-                }
-                this.hoverElement = null;
-                this.invalidateToolDrawing();
-                return;
-            }
-            if (this.resizePosition) {
-                this.resizePosition = null
-                this.restoreAction(engine, event.position);
-            }
-        }
-
-        // Handle hover outline
-        const prev = this.hoverElement;
-        this.hoverElement = this.getHoverElement(engine, event.position);
-        if (prev !== this.hoverElement) {
-            this.action = this.hoverElement ? Action.Hover : Action.None;
-            this.invalidateToolDrawing();
-        }
+        this.restoreAction(engine, event.position);
     }
 
     onMouseLeftButtonDown(engine: CanvasEngine, event: ToolMouseEvent) {
-        if (this.hoverGuide) {
-            this.hoverGuidePosition = this.hoverGuide.position;
-            this.hoverGuide.isHidden = true;
-            this.invalidate();
-            return;
-        }
-
+        this.isWorking = true;
         this.changed = false;
 
-        if (this.moveByMiddle) {
-            this.position = event.position;
-            return;
+        // Handle guide
+        if (this.hoverGuide) {
+            return this.onGuideStart(engine);
         }
 
         // Handle resize
         if (this.resizePosition != null) {
-            this.snapping.init(engine, engine.selection);
-            this.position = event.position;
-            this.keyframeCounter.start(engine);
-            return;
+            return this.onResizeStart(engine);
         }
 
-        // Handle selection
-        const node = this.getHoverElement(engine, event.position);
-        if (node !== null) {
-            this.action = Action.Select;
-            this.position = event.position;
-            if (engine.selection.selectOrDeselect(node, this.keyboardStatus.isShift)) {
-                this.invalidateToolDrawing();
-                engine.emit(ProjectEvent.selectionChanged);
-            }
-            return;
+        // Handle move by middle
+        if (this.moveByMiddle) {
+            return this.onMoveStart(engine);
         }
 
         // Handle rectangle selection
-        this.action = Action.RectangleSelection;
+        if (this.hoverElement == null) {
+            this.action = Action.RectangleSelection;
+            return this.onSelectionStart(engine, event);
+        }
+
+        const selection = engine.selection;
+
+        // Handle move
+        if (selection.isSelected(this.hoverElement)) {
+            if (this.keyboardStatus.isShift) {
+                selection.deselect(this.hoverElement);
+                engine.emit(ProjectEvent.selectionChanged);
+                this.restoreAction(engine, event.position);
+                return;
+            }
+            return this.onMoveStart(engine);
+        }
+
+        // Handle element selection
+        if (selection.select(this.hoverElement, this.keyboardStatus.isShift)) {
+            engine.emit(ProjectEvent.selectionChanged);
+            return this.onMoveStart(engine);
+        }
+    }
+
+    onMouseLeftButtonMove(engine: CanvasEngine, event: ToolMouseEvent) {
+        if (this.doMouseMove) {
+            return this.doMouseMove(engine, event);
+        }
+    }
+
+    onMouseLeftButtonUp(engine: CanvasEngine, event: ToolMouseEvent) {
+        if (this.doMouseUp) {
+            this.doMouseUp(engine, event);
+        }
+
+        this.isWorking = false;
+        this.changed = false;
+        this.doMouseMove = this.doMouseUp = null;
+
+        this.removeSnapping();
+        this.restoreAction(engine, event.position, true);
+    }
+
+    private doMouseMove: (engine: CanvasEngine, event: ToolMouseEvent) => void = null;
+    private doMouseUp: (engine: CanvasEngine, event?: ToolMouseEvent) => void = null;
+
+    // ---
+
+    private selectionStart: Point = null;
+    private selectionEnd: Point = null;
+
+    onSelectionStart(engine: CanvasEngine, event: ToolMouseEvent) {
         this.selectionStart = event.position;
         this.selectionEnd = null;
+        this.doMouseMove = this.onSelectionMove;
+        this.doMouseUp = this.onSelectionEnd;
+
         if (engine.selection.clear()) {
             engine.emit(ProjectEvent.selectionChanged);
         }
         this.invalidateToolDrawing();
     }
 
-    onMouseLeftButtonMove(engine: CanvasEngine, event: ToolMouseEvent) {
-        // Check guides first
-        if (this.hoverGuide) {
-            const position = this.hoverGuide.isHorizontal ? event.position.y : event.position.x;
-            this.hoverGuide.position = this.keyboardStatus.isShift ? Math.round(position) : position;
-            this.invalidateToolDrawing();
-            return;
-        }
-        // Handle rectangle selection
-        if (this.selectionStart !== null) {
-            this.selectionEnd = event.position;
-            this.invalidateToolDrawing();
-            return;
-        }
+    onSelectionMove(engine: CanvasEngine, event: ToolMouseEvent) {
+        this.selectionEnd = event.position;
+        this.invalidateToolDrawing();
+    }
 
-        if (!this.position || this.position.equals(event.position)) {
-            // not moved
-            return;
-        }
-
+    onSelectionEnd(engine: CanvasEngine, event: ToolMouseEvent) {
         const selection = engine.selection;
-        const previousPosition = this.position;
-        this.position = event.position;
-
-        // Handle resize
-        if (this.resizePosition != null) {
-            const active = selection.activeElement;
-            const {matrix, flip} = engine.project.middleware.computeResizeInfo(
-                active,
-                this.snapping.snapPoint(event.position),
-                this.resizePosition,
-                this.keyboardStatus.isAlt,
-                this.keyboardStatus.isShift
-            );
-            if (flip.x) {
-                this.resizePosition.x = invertPosition(this.resizePosition.x);
-            }
-            if (flip.y) {
-                this.resizePosition.y = invertPosition(this.resizePosition.y);
-            }
-            if (engine.project.middleware.resizeElementByMatrix(active, matrix, flip)) {
-                this.changed = true;
-                this.invalidate();
-                engine.emit(ProjectEvent.propertyChanged);
-            }
-            return;
+        if (selection.rectSelect(
+            Rectangle.fromTransformedPoints(engine.document.globalMatrix, this.selectionStart, event.position),
+            engine.document,
+            this.keyboardStatus.isCtrl
+        )) {
+            engine.emit(ProjectEvent.selectionChanged);
         }
+        this.selectionStart = this.selectionEnd = null;
+    }
 
-        if (this.moveByMiddle || this.action !== Action.Move) {
-            this.snapping.init(engine, selection);
-            this.action = Action.Move;
-            this.keyframeCounter.start(engine);
-        }
+    private box: Rectangle = null;
+    private totalMoveDelta: Point = null;
 
-        let delta = event.position.sub(previousPosition);
+    onMoveStart(engine: CanvasEngine) {
+        this.action = Action.Move;
+        this.invalidateToolDrawing();
+        this.keyframeCounter.start(engine);
+        this.box = engine.selection.boundingBox;
+        this.totalMoveDelta = Point.ZERO;
+        this.snapping.init(engine, engine.selection);
+        this.doMouseMove = this.onMove;
+        this.doMouseUp = this.onMoveEnd;
+    }
+
+    onMove(engine: CanvasEngine, event: ToolMouseEvent) {
+        let delta: Point = event.position.sub(this.startPosition);
         if (delta.isZero) {
             return;
         }
 
-        delta = this.snapping.snapToSelectionBounds(engine, delta);
+        if (this.keyboardStatus.isShift) {
+            delta = this.snapping.snapBoundsAxis(this.box, delta);
+        } else {
+            delta = this.snapping.snapBounds(this.box, delta);
+        }
 
-        // Handle move
-        if (engine.project.middleware.moveElementsBy(selection, delta)) {
+        const total = this.totalMoveDelta;
+
+        if (total.equals(delta)) {
+            return;
+        }
+
+        this.totalMoveDelta = delta;
+
+        // calculate current delta
+        delta = delta.sub(total);
+
+        if (engine.project.middleware.moveElementsBy(engine.selection, delta)) {
+            this.invalidate();
+            engine.emit(ProjectEvent.propertyChanged);
+        }
+    }
+
+    onMoveEnd(engine: CanvasEngine) {
+        this.snapshotIfNeeded(engine, !this.totalMoveDelta.isZero);
+        this.box = null;
+        this.totalMoveDelta = null;
+    }
+
+    private hoverGuide: Guide | null = null;
+    private guideStartPosition: number;
+
+    onGuideStart(engine: CanvasEngine) {
+        this.guideStartPosition = this.hoverGuide.position;
+        this.hoverGuide.isHidden = true;
+        this.snapping.init(engine);
+        this.invalidate();
+        this.doMouseMove = this.onGuideMove;
+        this.doMouseUp = this.onGuideEnd;
+    }
+
+    onGuideMove(engine: CanvasEngine, event: ToolMouseEvent) {
+        this.hoverGuide.position = this.snapping.snapPoint(
+            this.keyboardStatus.isShift ? event.position.rounded() : event.position,
+            this.hoverGuide.isHorizontal ? 'x' : 'y', // lock
+        )[this.hoverGuide.isHorizontal ? 'y' : 'x'];
+        this.invalidateToolDrawing();
+    }
+
+    onGuideEnd(engine: CanvasEngine, event: ToolMouseEvent) {
+        const horizontal = this.hoverGuide.isHorizontal;
+
+        const guide = this.hoverGuide;
+        guide.isHidden = false;
+
+        const guides = engine.document.guides;
+
+        if ((horizontal && event.canvasPosition.y < 0) || (!horizontal && event.canvasPosition.x < 0) || guides.exists(guide.position, guide.isHorizontal, guide)) {
+            guides.remove(guide);
+            this.changed = true;
+        } else if (guide.position !== this.guideStartPosition) {
+            this.changed = true;
+        }
+
+        this.snapshotIfNeeded(engine, this.changed);
+    }
+
+    private resizePosition: AxisPointPosition | null = null;
+
+    onResizeStart(engine: CanvasEngine) {
+        this.snapping.init(engine, engine.selection);
+        this.position = engine.selection.activeElement.globalBounds.getPointAtPosition(this.resizePosition.x, this.resizePosition.y);
+        this.keyframeCounter.start(engine);
+        this.doMouseMove = this.onResize;
+        this.doMouseUp = this.onResizeEnd;
+    }
+
+    onResize(engine: CanvasEngine, event: ToolMouseEvent) {
+        const active = engine.selection.activeElement;
+
+        const {matrix, flip} = engine.project.middleware.computeResizeInfo(
+            active,
+            this.snapping.snapPoint(event.position),
+            this.resizePosition,
+            this.keyboardStatus.isAlt,
+            this.keyboardStatus.isShift
+        );
+        if (flip.x) {
+            this.resizePosition.x = invertPosition(this.resizePosition.x);
+        }
+        if (flip.y) {
+            this.resizePosition.y = invertPosition(this.resizePosition.y);
+        }
+        if (engine.project.middleware.resizeElementByMatrix(active, matrix, flip)) {
             this.changed = true;
             this.invalidate();
             engine.emit(ProjectEvent.propertyChanged);
         }
     }
 
-    onMouseLeftButtonUp(engine: CanvasEngine, event: ToolMouseEvent) {
-        this.removeSnapping();
+    onResizeEnd(engine: CanvasEngine) {
+        this.snapshotIfNeeded(engine, this.changed);
+        this.resizePosition = null;
+    }
 
-        // Check guides first
-        if (this.hoverGuide) {
-            const horizontal = this.hoverGuide.isHorizontal;
-            const {position, canvasPosition} = event;
-
-            if (this.keyboardStatus.isShift) {
-                this.hoverGuide.position = Math.round(this.hoverGuide.isHorizontal ? position.y : position.x);
-            } else {
-                this.hoverGuide.position = this.hoverGuide.isHorizontal ? position.y : position.x;
-            }
-
-            this.hoverGuide.isHidden = false;
-
-            if ((horizontal && canvasPosition.y < 0) || (!horizontal && canvasPosition.x < 0)) {
-                engine.document.guides.remove(this.hoverGuide);
-            }
-
-            if (this.hoverGuide.position !== this.hoverGuidePosition) {
-                engine.project.state.snapshot();
-            }
-
-            this.restoreAction(engine, position, true);
-            return;
+    /**
+     * Create a snapshot if something has changed
+     */
+    protected snapshotIfNeeded(engine: CanvasEngine, changed?: boolean): void {
+        if (changed || this.keyframeCounter.hasChanged(engine)) {
+            engine.project.state.snapshot();
         }
-
-        // Handle selection rect
-        if (this.selectionStart) {
-            const selection = engine.selection;
-            if (selection.rectSelect(
-                Rectangle.fromTransformedPoints(engine.document.globalMatrix, this.selectionStart, event.position),
-                engine.document,
-                !this.keyboardStatus.isCtrl
-            )) {
-                engine.emit(ProjectEvent.selectionChanged);
-            }
-            this.selectionStart = this.selectionEnd = null;
-            this.restoreAction(engine, event.position);
-            return;
-        }
-
-        if (this.position !== null) {
-            if (this.changed) {
-                let save: boolean = false;
-
-                switch (this.action) {
-                    case Action.Move:
-                    case Action.Resize:
-                        save = this.position && !this.position.equals(this.startPosition);
-                        break;
-                }
-                if (save || this.keyframeCounter.hasChanged(engine)) {
-                    engine.project.state.snapshot();
-                }
-            }
-
-            this.position = null;
-            this.resizePosition = null;
-            this.changed = false;
-            this.restoreAction(engine, event.position);
-            return;
-        }
+        this.changed = false;
     }
 
     onMouseWheelButtonDown(engine: CanvasEngine, event: ToolMouseEvent) {
@@ -400,24 +571,10 @@ export class SelectionTool extends BaseTool {
         this.restoreAction(engine, event.position);
     }
 
-    protected restoreAction(engine: CanvasEngine, position: Point, invalidate?: boolean) {
-        this.hoverGuide = getHoverGuide(engine, position);
-
-        if (this.hoverGuide) {
-            this.action = this.hoverGuide.isHorizontal ? Action.MoveHorizontalGuide : Action.MoveVerticalGuide;
-        } else {
-            this.hoverElement = this.getHoverElement(engine, position);
-            this.action = this.hoverElement ? Action.Hover : Action.None;
+    onMouseWheel(engine: CanvasEngine, event: ToolMouseEvent) {
+        super.onMouseWheel(engine, event);
+        if (!this.isWorking) {
+            this.restoreAction(engine, event.position);
         }
-
-        if (invalidate) {
-            this.invalidate();
-        } else {
-            this.invalidateToolDrawing();
-        }
-    }
-
-    protected getHoverElement(engine: CanvasEngine, position: Point): Element | null {
-        return engine.document.getElementAt(position, !this.keyboardStatus.isCtrl);
     }
 }

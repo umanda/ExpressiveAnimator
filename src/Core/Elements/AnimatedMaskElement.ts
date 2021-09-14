@@ -34,9 +34,20 @@ export class AnimatedMaskElement extends MaskElement {
         return this._time;
     }
 
-    clone(newId?: boolean): AnimatedMaskElement {
-        const clone = super.clone(newId) as AnimatedMaskElement;
-        clone._time = this._time;
-        return clone;
+    protected cloneCurrent(): AnimatedMaskElement {
+        const el = new AnimatedMaskElement(this._reference);
+        el._time = this._time;
+        return el;
+    }
+
+    protected applyJSON(json: any) {
+        this._time = json.time || 0;
+        super.applyJSON(json);
+    }
+
+    toJSON() {
+        const json = super.toJSON();
+        json.time = this._time;
+        return json;
     }
 }

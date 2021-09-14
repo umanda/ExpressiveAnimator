@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+import "./serialize";
 export * from "./Animation";
 export * from "./Project";
 export * from "./Project";
 export * from "./Tools";
+export * from "./Mapping";

@@ -19,17 +19,20 @@ import {
     BrushType,
     clamp,
     Color,
-    ConicalGradientBrush, EmptyBrush,
+    ConicalGradientBrush,
+    EmptyBrush,
     GradientBrush,
     leastCommonMultiple,
     LinearGradientBrush,
-    Path,
+    PathJoint,
     PathNode,
+    PathNodeType,
     Point,
     RadialGradientBrush,
     RectShapeRadius,
     round,
-    SolidBrush, StopColor,
+    SolidBrush,
+    StopColor,
     StopColorList,
     TwoPointGradientBrush
 } from "@zindex/canvas-engine";
@@ -196,10 +199,10 @@ function interpolateStopColorArray(from: StopColor[], to: StopColor[], percent: 
 
     if (diff > 0) {
         from = from.slice();
-        addMissingStops(from, to, diff);
+        StopColorList.expandStopColorArray(from, to, diff);
     } else if (diff < 0) {
         to= to.slice();
-        addMissingStops(to, from, -diff);
+        StopColorList.expandStopColorArray(to, from, -diff);
     }
 
     const list: StopColor[] = [];
@@ -213,17 +216,6 @@ function interpolateStopColorArray(from: StopColor[], to: StopColor[], percent: 
     }
 
     return list;
-}
-
-function addMissingStops(dst: StopColor[], src: StopColor[], count: number) {
-    // TODO: check, is this right?
-    const last = src.length - 1;
-    for (let i = 0; i < count; i++) {
-        dst.push({
-            offset: 1,
-            color: src[last - i].color,
-        });
-    }
 }
 
 function emptyToGradient(from: EmptyBrush, to: GradientBrush, percent: number): GradientBrush {
@@ -320,12 +312,6 @@ export function interpolateDashArray(from: number[], to: number[], percent: numb
     return list;
 }
 
-export function interpolateMotion(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {
-    // TODO:
-    // @ts-ignore
-    return interpolatePoint(from, to, percent);
-}
-
 export function interpolateRectRadius(from: RectShapeRadius, to: RectShapeRadius, percent: number = 0.5): RectShapeRadius {
     if (percent <= 0) {
         return from.clone();
@@ -352,25 +338,57 @@ export function interpolateRectRadius(from: RectShapeRadius, to: RectShapeRadius
     return new RectShapeRadius(list as any)
 }
 
-export function interpolatePathNode(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {
-    // TODO:
-    return interpolateDiscrete(from, to, percent).clone();
-}
-
-export function interpolatePath(from: Path, to: Path, percent: number = 0.5): Path {
-    if (from.nodes.length !== to.nodes.length) {
-        return interpolateDiscrete(from, to, percent).clone();
+export function interpolateMotion(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {
+    if (percent === 0 || from.equals(to)) {
+        return from;
+    }
+    if (percent === 1) {
+        return to;
     }
 
-    const length = from.nodes.length;
+    const point = PathNode.point(from, to, percent);
+
+    return new PathNode(new Point(point.x, point.y), PathNodeType.Node, PathJoint.Cusp);
+}
+
+export function interpolatePathNode(from: PathNode, to: PathNode, percent: number = 0.5): PathNode {
+    if (percent <= 0 || from.equals(to)) {
+        return from;
+    }
+    if (percent >= 1) {
+        return to;
+    }
+
+    const point = interpolatePoint(from.point, to.point, percent);
+    const hIn = from.handleIn && to.handleIn ? interpolatePoint(from.handleIn, to.handleIn, percent) : null;
+    const hOut = from.handleOut && to.handleOut ? interpolatePoint(from.handleOut, to.handleOut, percent) : null;
+
+    if (percent < 0.5) {
+        return new PathNode(point, from.type, from.joint, hIn ?? from.handleIn, hOut ?? from.handleOut);
+    }
+
+    return new PathNode(point, to.type, to.joint, hIn ?? to.handleIn, hOut ?? to.handleOut);
+}
+
+export function interpolatePath(from: PathNode[], to: PathNode[], percent: number = 0.5): PathNode[] {
+    if (percent <= 0) {
+        return from.slice();
+    }
+    if (percent >= 1) {
+        return to.slice();
+    }
+
+    if (from.length !== to.length) {
+        return interpolateDiscrete(from, to, percent).slice();
+    }
+
+    const length = from.length;
 
     const nodes = [];
 
     for (let i = 0; i < length; i++) {
-        nodes.push(interpolatePathNode(from.nodes[i], to.nodes[i], percent));
+        nodes.push(interpolatePathNode(from[i], to[i], percent));
     }
 
-    // TODO: check if something like mirror, etc.
-
-    return new Path(nodes);
+    return nodes;
 }

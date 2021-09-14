@@ -17,9 +17,10 @@ import AdobeWorkflowIcons from "./workflow-icons.svg";
 import "@adobe/focus-ring-polyfill";
 
 import {CanvasEngineInit} from "@zindex/canvas-engine";
-import {CurrentProject} from "./Stores";
 import {getSampleProject} from "./doc1";
 import {patchSpectrum} from "./patchSpectrum";
+import {setNewProject} from "./actions";
+import "./hotkeys";
 
 export default LoadApp();
 
@@ -31,19 +32,12 @@ async function LoadApp() {
     await loadIconSet('expr', CustomIcons);
     await loadIconSet('workflow', AdobeWorkflowIcons);
 
-    const project = await getSampleProject();
-    CurrentProject.set(project);
+    await setNewProject(await getSampleProject());
 
     const app = new App({
         target: document.body,
         props: {},
     });
-
-    setTimeout(() => {
-        project.engine.viewBox.zoomFit(project.document.localBounds, project.engine.boundingBox, 20);
-        window.dispatchEvent(new CustomEvent('expressive-animator-ready', {detail: app}));
-    }, 2000);
-
 
     return app;
 }

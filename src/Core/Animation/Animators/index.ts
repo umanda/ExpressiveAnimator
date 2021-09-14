@@ -28,6 +28,7 @@ import {SymbolAnimators} from "./SymbolAnimators";
 import {MaskAnimators} from "./MaskAnimators";
 
 export * from "./CommonAnimations";
+export * from "./MotionAnimation";
 export * from "./CommonAnimators";
 
 export {

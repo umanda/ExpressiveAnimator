@@ -1,7 +1,7 @@
 <script lang="ts">
     import {Color} from "@zindex/canvas-engine";
-    import {CurrentColorMode} from "../../../Stores";
-    import ColorControl from "../../../Controls/ColorControl.svelte";
+    import {CurrentColorMode} from "../Stores";
+    import ColorControl from "./ColorControl.svelte";
     import {TinyColor} from "@ctrl/tinycolor";
     import {createEventDispatcher} from "svelte";
 

@@ -1,15 +1,15 @@
 <script lang="ts">
     import CascadeMenu from "../CascadeMenu";
-    import {CurrentAnimatedElements, CurrentProject, CurrentSelection} from "../../Stores";
-    import type {AnimatedElement} from "../../Stores";
+    import {CurrentProject, CurrentSelection} from "../../Stores";
 
     import {
         TransformAnimators,
         ElementAnimators,
         DefaultAnimatorsMap,
-        FillAnimators, StrokeAnimators
+        FillAnimators,
+        StrokeAnimators,
     } from "../../Core";
-    import {getElementTitleByType} from "../Mapping";
+    import {getElementTitleByType} from "../../Core";
     import {Element, VectorElement} from "@zindex/canvas-engine";
 
     function createItemFromAnimators(title: string, animators) {
@@ -53,13 +53,13 @@
     const compositingItem = createItemFromAnimators('Compositing', ElementAnimators);
     const specificItems = createSpecificItems();
 
-    function getItems(animated: AnimatedElement[]) {
+    function getItems(elements: Element[]) {
         let isVector: boolean = false;
         const types = [];
 
         let items = [];
 
-        for (const {element} of animated) {
+        for (const element of elements) {
             if (types.indexOf(element.type) !== -1) {
                 continue;
             }
@@ -97,8 +97,7 @@
     let items = [];
 
     function onOpen() {
-        let elements = $CurrentAnimatedElements.filter(e => $CurrentSelection.isSelected(e.element));
-        items = getItems(elements);
+        items = getItems(Array.from($CurrentSelection.elements));
         open = true;
     }
 
@@ -116,10 +115,7 @@
 
         let added: boolean = false;
 
-        for (const {element, animatedProperties} of $CurrentAnimatedElements) {
-            if (!$CurrentSelection.isSelected(element)) {
-                continue;
-            }
+        for (const element of $CurrentSelection) {
             if (action.animator.type != null && action.animator.type !== element.type) {
                 continue;
             }
@@ -128,9 +124,11 @@
                 continue;
             }
 
-            if (animatedProperties != null && animatedProperties.length > 0) {
+            const animatedProperties = project.document.animation.getAnimatedProperties(element);
+
+            if (animatedProperties != null) {
                 let exists: boolean = false;
-                for (const item of animatedProperties) {
+                for (const [item] of Object.values(animatedProperties)) {
                     if (item.animator === action.animator) {
                         exists = true;
                         break;
@@ -146,7 +144,7 @@
                 continue;
             }
 
-            if (!project.document.animation.addAnimation(element, action.property, animation)) {
+            if (!project.document.animation.addAnimation(element, animation)) {
                 continue;
             }
 
@@ -168,8 +166,8 @@
 >
     <sp-action-button title="Add animator"
                       on:click={onOpen}
-                      disabled={disabled || $CurrentAnimatedElements.length === 0 || $CurrentSelection.length === 0} slot="trigger">
-        <sp-icon size="s" name="expr:add-color" slot="icon"></sp-icon>
+                      disabled={disabled || $CurrentSelection.length === 0} slot="trigger">
+        <sp-icon size="m" name="expr:add-color" slot="icon"></sp-icon>
     </sp-action-button>
     <CascadeMenu slot="click-content" open={open} on:action={onAction} items={items} />
 </overlay-trigger>

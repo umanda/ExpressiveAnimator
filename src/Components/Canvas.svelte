@@ -1,16 +1,15 @@
 <script lang="ts">
     import {onMount, onDestroy, tick} from "svelte";
-    import type {KeyframeSelection, AnimationDocument} from "../Core";
+    import type {AnimationDocument} from "../Core";
     import type {CanvasEngine, Selection, SnappingOptions} from "@zindex/canvas-engine";
 
     import {
         CurrentTool, CurrentTheme, CurrentTime,
         CanvasEngineState, CurrentProject, CurrentDocument,
         CurrentCanvasZoom, CurrentGlobalElementProperties,
-        CurrentNumberUnit, IsPlaying,
+        CurrentNumberUnit, IsPlaying, IsProjectSaved,
         notifyAnimationChanged,
         notifyPropertiesChanged,
-        notifyStateChanged,
         notifySelectionChanged,
     } from "../Stores";
 
@@ -30,26 +29,13 @@
     $: if (canvas) canvas.showGrid = $showGrid;
     $: if (canvas) canvas.showGridToBack = $showGridToBack;
     $: if (canvas) canvas.highQuality = $highQuality;
-    $: if (canvas) setSnapping(canvas, $snapping as SnappingOptions);
+    $: if (canvas) canvas.snappingOptions = $snapping as SnappingOptions;
     $: {
         if (canvas && $CurrentProject && $CurrentProject.middleware.setTime($CurrentTime)) {
             canvas.invalidate();
             notifyPropertiesChanged();
         }
     }
-
-    function setSnapping(canvas: CanvasEngine, options: SnappingOptions) {
-        const snap = canvas.snappingOptions;
-        snap.enabled = options.enabled;
-        snap.grid = options.grid;
-        snap.pixel = options.pixel;
-        snap.guides = options.guides;
-        snap.bounds = options.bounds;
-        snap.points = options.points;
-        snap.contours = options.contours;
-        snap.tolerance = options.tolerance;
-    }
-
 
     onMount(() => {
         canvas.preventSurfaceDisposal();
@@ -97,24 +83,18 @@
         notifyPropertiesChanged();
     }
 
-    async function onSnapshotCreated(e: CustomEvent) {
+    async function onSnapshotCreated() {
         await tick();
-        //notifyStateChanged();
+        IsProjectSaved.set(false);
         CurrentProject.forceUpdate();
     }
 
-    async function onSelectionChanged(e: CustomEvent<Selection<AnimationDocument>>) {
+    async function onSelectionChanged(/*e: CustomEvent<Selection<AnimationDocument>>*/) {
         await tick();
         notifySelectionChanged();
     }
 
-    async function onKeyframeSelectionChanged(e: CustomEvent<KeyframeSelection>) {
-        await tick();
-        // TODO: update keyframe selection
-        console.log('update keyframe selection')
-    }
-
-    async function onKeyframeAdded(e: CustomEvent) {
+    async function onKeyframeAdded() {
         await tick();
         notifyAnimationChanged();
     }
@@ -150,6 +130,7 @@
 <svelte:window on:beforeunload={beforeWindowUnload}/>
 <div class="canvas-wrapper">
     <canvas-engine
+            on:focus
             tabindex="0"
             class:hidden={hidden} bind:this={canvas}
 
@@ -164,7 +145,8 @@
             on:treeChanged={onTreeChanged}
 
             on:keyframeAdded={onKeyframeAdded}
-            on:keyframeSelectionChanged={onKeyframeSelectionChanged}
+
+            on:contextmenu
     >
         <span slot="unit">{$CurrentNumberUnit}</span>
     </canvas-engine>

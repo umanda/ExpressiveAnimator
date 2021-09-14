@@ -26,7 +26,7 @@ export const PolyAnimators: ElementAnimatorMap<PolyElement> = {
         title: 'Points',
         type: 'poly',
         create() {
-            return new PolyAnimation();
+            return new PolyAnimation('points', 'poly');
         }
     }
 }

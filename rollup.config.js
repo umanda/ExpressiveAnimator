@@ -123,7 +123,12 @@ if (production) {
         sourceMap: false,
         inlineSources: false
       }),
-      terser()
+      terser({
+        keep_classnames: true,
+        mangle: {
+          keep_classnames: true
+        }
+      })
     ],
     watch: {
       clearScreen: false

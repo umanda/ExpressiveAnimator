@@ -26,7 +26,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Outer Radius',
         type: 'star',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('outerRadius', 'star');
         }
     },
     innerRadius: {
@@ -34,7 +34,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Inner Radius',
         type: 'star',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('innerRadius', 'star');
         }
     },
     outerCornerRadius: {
@@ -42,7 +42,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Outer Roundness',
         type: 'star',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('outerCornerRadius', 'star');
         }
     },
     innerCornerRadius: {
@@ -50,7 +50,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Inner Roundness',
         type: 'star',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('innerCornerRadius', 'star');
         }
     },
     outerRotate: {
@@ -58,7 +58,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Outer Rotate',
         type: 'star',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('outerRotate', 'star');
         }
     },
     innerRotate: {
@@ -66,7 +66,7 @@ export const StarAnimators: ElementAnimatorMap<StarElement> = {
         title: 'Inner Rotate',
         type: 'star',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('innerRotate', 'star');
         }
     },
 }

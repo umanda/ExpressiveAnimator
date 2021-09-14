@@ -73,8 +73,9 @@
         playHeadPosition = undefined;
     }
 
-    function onRulerClick(e: MouseEvent) {
+    function onRulerPointerDown(e: PointerEvent) {
         $CurrentTime = roundTime(getTimeAtX(e.clientX - bounds.x, scroll, zoom), scaleFactor);
+        playHeadPointerDown(e);
     }
 
     function setupCanvas() {
@@ -109,9 +110,12 @@
             observer.disconnect();
         };
     });
+
+    $: playHead && playHead.style.setProperty('--timeline-play-offset', $CurrentTime.toString());
+    $: playHead && playHead.style.setProperty('--timeline-scroll-left', scroll + 'px');
 </script>
 <div class="timeline-ruler">
-    <canvas bind:this={canvas} on:click={onRulerClick}></canvas>
+    <canvas bind:this={canvas} on:pointerdown={onRulerPointerDown}></canvas>
     <div bind:this={playHead}
          on:pointerdown|self={playHeadPointerDown}
          on:pointermove={playHeadPointerMove}

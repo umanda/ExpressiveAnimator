@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import {isMacOS} from "@zindex/canvas-engine";
+
 export type MenuItemDef = {
     title: string,
     disabled?: boolean,
@@ -21,3 +23,21 @@ export type MenuItemDef = {
     children?: (MenuItemDef | null)[],
     [key: string]: any;
 };
+
+const keyMap = isMacOS
+    ? {
+        'Control': 'Cmd',
+        'Alt': 'Option',
+        'Delete': '',
+    }
+    : {
+        'Control': 'Ctrl',
+        'Delete': ''
+    };
+
+export function getKeys(value: string[]): string {
+    if (!value) {
+        return undefined;
+    }
+    return value.map(k => k in keyMap ? keyMap[k] : k).join(' + ');
+}

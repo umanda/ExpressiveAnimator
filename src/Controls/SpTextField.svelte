@@ -10,7 +10,7 @@
 
     export let value: string = '';
     export let label: string = undefined;
-    export let labelPosition: 'start' | 'center' | 'end' = 'center';
+    export let labelPosition: 'start' | 'center' | 'end' | 'above' = 'center';
 
     export let size: 's' | 'm' | 'l' | 'xl' = 'm';
     export let quiet: boolean = false;

@@ -19,19 +19,19 @@ import type {Element, VectorElement} from "@zindex/canvas-engine";
 import {
     BrushAnimation,
     DashArrayAnimation,
-    MotionAnimation,
     NumberAnimation,
     OpacityAnimation,
     PointAnimation,
     PositiveNumberAnimation
 } from "./CommonAnimations";
+import {MotionAnimation} from "./MotionAnimation";
 
 export const ElementAnimators: ElementAnimatorMap<Element> = {
     opacity: {
         id: 'opacity',
         title: 'Opacity',
         create() {
-            return new OpacityAnimation();
+            return new OpacityAnimation('opacity', null);
         }
     }
 }
@@ -42,43 +42,42 @@ export const TransformAnimators: ElementAnimatorMap<Element> = {
         title: 'Position',
         //@ts-ignore
         create() {
-            // TODO: check this out
-            return new MotionAnimation();
+            return new MotionAnimation('position', null);
         }
     },
     anchor: {
         id: 'anchor',
         title: 'Anchor',
         create() {
-            return new PointAnimation();
+            return new PointAnimation('anchor', null);
         }
     },
     rotate: {
         id: 'rotate',
         title: 'Rotate',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('rotate', null);
         }
     },
     scale: {
         id: 'scale',
         title: 'Scale',
         create() {
-            return new PointAnimation();
+            return new PointAnimation('scale', null);
         }
     },
     skewAngle: {
         id: 'skew-angle',
         title: 'Skew Angle',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('skewAngle', null);
         }
     },
     skewAxis: {
         id: 'skew-axis',
         title: 'Skew Axis',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('skewAxis', null);
         }
     },
 };
@@ -88,14 +87,14 @@ export const FillAnimators: ElementAnimatorMap<VectorElement> = {
         id: 'fill',
         title: 'Fill Color',
         create() {
-            return new BrushAnimation();
+            return new BrushAnimation('fill', null);
         }
     },
     fillOpacity: {
         id: 'fill-opacity',
         title: 'Fill Opacity',
         create() {
-            return new OpacityAnimation();
+            return new OpacityAnimation('fillOpacity', null);
         }
     },
 }
@@ -105,35 +104,35 @@ export const StrokeAnimators: ElementAnimatorMap<VectorElement> = {
         id: 'stroke',
         title: 'Stroke Color',
         create() {
-            return new BrushAnimation();
+            return new BrushAnimation('strokeBrush', null);
         }
     },
     strokeOpacity: {
         id: 'stroke-opacity',
         title: 'Stroke Opacity',
         create() {
-            return new OpacityAnimation();
+            return new OpacityAnimation('strokeOpacity', null);
         }
     },
     strokeLineWidth: {
         id: 'stroke-width',
         title: 'Stroke Width',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('strokeLineWidth', null);
         }
     },
     strokeDashOffset: {
         id: 'stroke-dash-offset',
         title: 'Dash Offset',
         create() {
-            return new NumberAnimation();
+            return new NumberAnimation('strokeDashOffset', null);
         }
     },
     strokeDashArray: {
         id: 'stroke-dash-array',
         title: 'Dash Array',
         create() {
-            return new DashArrayAnimation();
+            return new DashArrayAnimation('strokeDashArray', null);
         }
     },
 };

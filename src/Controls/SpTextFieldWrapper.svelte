@@ -3,7 +3,7 @@
     import {mergeClasses} from "./utils";
 
     export let label: string = undefined;
-    export let labelPosition: 'start' | 'center' | 'end' = 'center';
+    export let labelPosition: 'start' | 'center' | 'end' | 'above' = 'center';
     export let id: string = undefined;
     export let disabled: boolean = false;
     export let size: 's' | 'm' | 'l' | 'xl' = 'm';
@@ -41,7 +41,6 @@
         display: inline-flex;
         gap: 0;
         width: 100%;
-        /* TODO: finish wrapper */
     }
 
     .textfield-wrapper.textfield-label-center {
@@ -51,6 +50,18 @@
     .textfield-wrapper.textfield-label-start {
         flex-direction: row-reverse;
         gap: var(--textfield-label-gap, var(--spectrum-global-dimension-size-100));
+    }
+
+    .textfield-wrapper.textfield-label-above {
+        flex-direction: column-reverse;
+        align-items: flex-start;
+        gap: 0;
+        display: flex;
+        width: auto;
+    }
+
+    .textfield-wrapper.textfield-label-above .textfield-input {
+        width: 100%;
     }
 
     .textfield-wrapper.textfield-label-end {

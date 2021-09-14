@@ -34,7 +34,7 @@
     }
 
     /*.timeline-item.is-selected {*/
-    /*    background: var(--spectrum-semantic-cta-color-background-default);*/
+    /*    background: var(--spectrum-global-color-blue-500);*/
     /*}*/
 
     .timeline-item.is-disabled {
@@ -45,6 +45,7 @@
         position: relative;
         min-width: 100%;
         padding-left: calc(var(--timeline-keyframe-size) / 2);
+        /*background: linear-gradient(transparent 50%, var(--spectrum-global-color-gray-400) 50%, var(--spectrum-global-color-gray-400) calc(50% + 1px), transparent calc(50% + 1px));*/
     }
 
     .timeline-item > .timeline-keyframes-line {

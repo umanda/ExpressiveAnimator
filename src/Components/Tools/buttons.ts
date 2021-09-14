@@ -18,6 +18,7 @@ export type ToolButtonDef = {
     tool: string,
     icon: string,
     title: string,
+    shortcut?: string,
     disabled?: boolean,
 };
 
@@ -27,90 +28,101 @@ export const buttons: ToolButtons = [
     {
         tool: 'selection',
         icon: 'expr:selection-tool',
-        title: 'Selection tool (V)'
+        title: 'Selection tool',
+        shortcut: 'V',
     },
     {
         tool: 'path',
-        disabled: true,
         icon: 'expr:direct-selection-tool',
-        title: 'Node tool (A)'
+        title: 'Node tool',
+        shortcut: 'A',
     },
     {
         tool: 'transform',
         icon: 'expr:transform-tool',
-        title: 'Transform tool (F)'
+        title: 'Transform tool',
+        shortcut: 'F',
     },
     {
         tool: 'pen',
         icon: 'expr:pen-tool',
-        title: 'Pen tool (P)',
-        disabled: true
+        title: 'Pen tool',
+        shortcut: 'P',
     },
     [
         {
             tool: 'rect',
             icon: 'expr:rectangle-tool',
-            title: 'Rectangle tool (R)'
+            title: 'Rectangle tool',
+            shortcut: 'R',
         },
         {
             tool: 'ellipse',
             icon: 'expr:ellipse-tool',
-            title: 'Ellipse tool (E)'
+            title: 'Ellipse tool',
+            shortcut: 'E',
         },
         {
             tool: 'regular-polygon',
             icon: 'expr:polygon-tool',
-            title: 'Polygon tool (O)'
+            title: 'Polygon tool',
+            shortcut: 'O',
         },
         {
             tool: 'star',
             icon: 'expr:star-tool',
-            title: 'Star tool (S)'
+            title: 'Star tool',
+            shortcut: 'S',
         },
         {
             tool: 'poly',
             icon: 'expr:polyline-tool',
-            title: 'Polyline tool (W)'
+            title: 'Polyline tool',
+            shortcut: 'W',
         },
         {
             tool: 'line',
             icon: 'expr:line-tool',
-            title: 'Line tool (L)',
+            title: 'Line tool',
+            shortcut: 'L',
         },
     ],
     {
         tool: 'gradient',
         icon: 'expr:gradient-tool',
-        title: 'Gradient tool (G)',
-        disabled: true
+        title: 'Gradient tool',
+        shortcut: 'G',
     },
     {
         tool: 'color-picker',
         icon: 'expr:colorpicker-tool',
-        title: 'Eyedropper tool (I)',
-        disabled: true
+        title: 'Eyedropper tool',
+        shortcut: 'I',
     },
-    // TODO: image tool info
     /*
-    {
-        tool: 'image',
-        icon: 'expr:image-tool',
-        title: 'Image tool ()'
-    },*/
     {
         tool: 'text',
         icon: 'expr:text-tool',
         title: 'Text tool (T)',
         disabled: true
-    },
+    },*/
     {
         tool: 'pan',
         icon: 'expr:pan-tool',
-        title: 'Hand tool (H)'
+        title: 'Hand tool',
+        shortcut: 'H',
     },
     {
         tool: 'zoom',
         icon: 'expr:zoom-tool',
-        title: 'Zoom tool (Z)'
+        title: 'Zoom tool',
+        shortcut: 'Z',
     },
 ];
+
+export function getTitle(button: ToolButtonDef): string {
+    if (!button.shortcut) {
+        return button.title;
+    }
+    return button.title + ' (' + button.shortcut + ')';
+}

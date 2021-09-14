@@ -5,7 +5,6 @@
     import Star from "./Star.svelte";
     import Poly from "./Poly.svelte";
     import Line from "./Line.svelte";
-    // import Coords from "./Coords.svelte";
     import {Element} from "@zindex/canvas-engine";
 
     export let value: object;
@@ -24,10 +23,7 @@
 
     let component = null;
     $: component = map[type] || null;
-
-    // TODO: proportional size
 </script>
-<!--<Coords value={value instanceof Element ? value : null} unit={unit} readonly={readonly} />-->
 {#if component}
     <svelte:component this={component}
                       value={value || {}} readonly={readonly}

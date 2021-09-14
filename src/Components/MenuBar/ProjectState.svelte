@@ -1,129 +1,39 @@
 <script lang="ts">
-    import {
-        ProjectFileHandle,
-        CurrentProject,
-        CurrentProjectState,
-        IsProjectSaved,
-        notifySelectionChanged, notifyKeyframeSelectionChanged, CurrentTime
-    } from "../../Stores";
-    import {NativeAnimationExporter, NativeAnimationImporter} from "../../Core";
-    import {tick} from "svelte";
+    import {CurrentProject, IsProjectSaved} from "../../Stores";
+    import {undo, redo, showOpenDialog, saveProject} from "../../actions";
+    import GlobalMenu from "./GlobalMenu.svelte";
+    import type {State} from "@zindex/canvas-engine";
 
     export let readonly: boolean = false;
-
-    declare global {
-        interface Window {
-            showOpenFilePicker(): FileSystemFileHandle[];
-
-            showSaveFilePicker(options?: any): FileSystemFileHandle;
-        }
-    }
-
-    function undo() {
-        if (readonly) {
-            return;
-        }
-        const engine = $CurrentProject.engine;
-        if (engine) {
-            engine.undo();
-        }
-    }
-
-    function redo() {
-        if (readonly) {
-            return;
-        }
-        const engine = $CurrentProject.engine;
-        if (engine) {
-            engine.redo();
-        }
-    }
+    export let menu: any[];
 
     async function open() {
-        if (readonly) {
-            return;
-        }
-
-        if (!$IsProjectSaved) {
-            // Ask user if they want to save the current project
-        }
-
-        let fileHandle: FileSystemFileHandle;
-
-        try {
-            [fileHandle] = await window.showOpenFilePicker();
-        } catch (e) {
-            return;
-        }
-
-        $ProjectFileHandle = fileHandle;
-        const stream = (await fileHandle.getFile()).stream();
-        const importer = new NativeAnimationImporter();
-        const project = await importer.import(stream);
-        importer.dispose();
-
-        const old = $CurrentProject;
-        if (old) {
-            old.selection.clear();
-            notifySelectionChanged();
-            old.keyframeSelection.clear();
-            notifyKeyframeSelectionChanged();
-            old.engine?.stopRenderLoop();
-        }
-        $CurrentTime = 0;
-        $CurrentProject = project;
-        $IsProjectSaved = true;
-
-        await tick();
-        old.dispose();
+        await showOpenDialog();
     }
 
     async function save() {
-        if (readonly) {
-            return;
-        }
-        if (!$ProjectFileHandle) {
-            try {
-                $ProjectFileHandle = await window.showSaveFilePicker({
-                    types: [
-                        {
-                            description: 'Expressive Animation files',
-                            startIn: 'documents',
-                            accept: {
-                                'expressive/animation': ['.eaf']
-                            }
-                        }
-                    ]
-                });
-            } catch {
-                return;
-            }
-        }
-
-        const exporter = new NativeAnimationExporter();
-        const stream = await exporter.export($CurrentProject)
-        await stream.pipeTo(await $ProjectFileHandle.createWritable());
-
-        $IsProjectSaved = true;
-        exporter.dispose();
+        await saveProject();
     }
+
+    let state: State<any, any, any>;
+    $: state = $CurrentProject?.state;
 </script>
 <sp-action-group compact quiet>
-<!--    <GlobalMenu />-->
-    <sp-action-button title="Open" on:click={open}>
+    <GlobalMenu on:action items={menu} readonly={readonly} />
+    <sp-action-button title="Open" on:click={open} disabled={readonly}>
         <sp-icon size="s" name="workflow:FolderOpen" slot="icon"></sp-icon>
     </sp-action-button>
-    <sp-action-button title="Save" on:click={save}>
+    <sp-action-button title="Save" on:click={save} disabled={readonly || $IsProjectSaved}>
         <sp-icon size="s" name="workflow:SaveFloppy" slot="icon"></sp-icon>
     </sp-action-button>
     <sp-action-button title="Undo"
                       on:click={undo}
-                      disabled={!$CurrentProjectState || !$CurrentProjectState.canUndo}>
+                      disabled={readonly || !state || !state.canUndo}>
         <sp-icon size="s" name="workflow:Undo" slot="icon"></sp-icon>
     </sp-action-button>
     <sp-action-button title="Redo"
                       on:click={redo}
-                      disabled={!$CurrentProjectState || !$CurrentProjectState.canRedo}>
+                      disabled={readonly || !state || !state.canRedo}>
         <sp-icon size="s" name="workflow:Redo" slot="icon"></sp-icon>
     </sp-action-button>
 </sp-action-group>

@@ -16,17 +16,15 @@
 
 import {Disposable, Element, equals, GlobalElementProperties} from "@zindex/canvas-engine";
 import type {AnimationProject} from "../../Core";
-import {KeyframeCounter} from "../../Core";
+import {AnimationDocument, KeyframeCounter} from "../../Core";
 import {CurrentProject, notifyPropertiesChanged} from "../../Stores";
-
-export type PropertyUpdate = (current: any, value: any, property: string, element?: Element | null) => any;
 
 export type PropertyInfo = {
     property: string,
     value: any,
     // Element type
     type?: string,
-    update?: PropertyUpdate,
+    update?: (project: AnimationProject, value: any, property: string, filter?: (el: Element) => boolean) => boolean,
 };
 
 export type ActionCallback = (project: AnimationProject, element: Element, value?: any) => boolean;
@@ -139,7 +137,6 @@ export class PropertyUpdater implements Disposable {
         if (info.type != null) {
             this.globalProperties.updateSpecificElementProperty(info.type, info.property, info.value);
         } else {
-            // TODO: using update()?
             this.globalProperties.updateProperty(info.property, info.value);
         }
     }
@@ -163,6 +160,20 @@ export class PropertyUpdater implements Disposable {
         obj[info.property] = info.value;
 
         this.snapshot();
+    }
+
+    callDocumentAction(info: (project: AnimationProject) => boolean): boolean {
+        // end any started update
+        this.endUpdate();
+
+        this.debug('document-action', info);
+
+        if (info(this.project)) {
+            this.snapshot();
+            return true;
+        }
+
+        return false;
     }
 
     callAction(info: ActionInfo): boolean {
@@ -242,36 +253,19 @@ export class PropertyUpdater implements Disposable {
 
     protected internalUpdate(info: PropertyInfo): boolean {
         const project = this.project;
-        if (!info.update) {
-            return project.middleware.setElementsProperty(
-                project.selection,
-                info.property as any,
-                info.value,
-                this.createElementFilter(info.type)
-            );
+        if (info.update) {
+            return info.update(project, info.value, info.property, info.type ? this.createElementFilter(info.type) : null);
         }
 
-        let changed: boolean = false;
-        for (const element of project.selection) {
-            if ((info.type != null && element.type !== info.type) || !(info.property in element)) {
-                continue;
-            }
-            const next = info.update(element[info.property], info.value, info.property, element);
-            if (next === undefined) {
-                continue;
-            }
-            if (project.middleware.setElementProperty(element, info.property as any, next)) {
-                changed = true;
-            }
-        }
-
-        return changed;
+        return project.middleware.setElementsProperty(
+            project.selection,
+            info.property as any,
+            info.value,
+            info.type ? this.createElementFilter(info.type) : null,
+        );
     }
 
-    protected createElementFilter(type: string) {
-        if (!type) {
-            return null;
-        }
+    protected createElementFilter(type: string): ((el: Element) => boolean) {
         return (e: Element) => e.type === type;
     }
 

@@ -10,8 +10,11 @@
         CurrentKeyframeSelection,
         CurrentProject,
         CurrentSelection,
+        CurrentSelectedElement,
         CurrentTime,
         CurrentTimelineFilterMode,
+        TimelineFollowMode,
+        TimelineIsWorking,
         notifyKeyframeSelectionChanged,
         notifyPropertiesChanged,
         notifySelectionChanged,
@@ -21,6 +24,7 @@
     import {MouseButton, Point, Rectangle} from "@zindex/canvas-engine";
     import type {Animation, Keyframe} from "../../Core";
     import {getRoundedDeltaTimeByX, getXAtTime} from "./utils";
+    import {tick} from "svelte";
 
     export let zoom: number = 1;
     export let scaleFactor: number = 1;
@@ -92,10 +96,14 @@
         );
     }
 
+    let previousSelection = null;
+
     function onTimelinePointerDown(e: PointerEvent) {
         if (!e.isPrimary || e.button !== MouseButton.Left) {
             return;
         }
+
+        $TimelineIsWorking = true;
 
         const target = e.target as HTMLElement;
         if (target.classList.contains('timeline-keyframe') ||
@@ -112,8 +120,13 @@
             return;
         }
 
-        if ($CurrentKeyframeSelection.clear()) {
-            notifyKeyframeSelectionChanged();
+        if (e.shiftKey) {
+            previousSelection = $CurrentKeyframeSelection.getSelectedKeyframes();
+        } else {
+            previousSelection = null;
+            if ($CurrentKeyframeSelection.clear()) {
+                notifyKeyframeSelectionChanged();
+            }
         }
 
         selectionRectPivot = getTimelinePoint(e);
@@ -135,27 +148,33 @@
             return;
         }
 
-        for (const element of pane.querySelectorAll('.timeline-keyframe') as NodeListOf<HTMLElement>) {
-            const bounds = element.getBoundingClientRect();
+        for (const element of pane.querySelectorAll('.timeline-keyframe')) {
+            const bounds = (element as HTMLElement).getBoundingClientRect();
             if (rect.contains(bounds.x + pane.scrollLeft - pane.offsetLeft + bounds.width / 2, bounds.y + pane.scrollTop - pane.offsetTop + bounds.height / 2)) {
-                yield element.getAttribute('data-keyframe-id');
+                yield (element as HTMLElement).getAttribute('data-keyframe-id');
             }
         }
     }
 
     function onTimelinePointerUp(e: PointerEvent) {
-        if (!e.isPrimary) {
+        if (!e.isPrimary || e.button !== MouseButton.Left) {
             return;
         }
+
+        $TimelineIsWorking = false;
 
         rightPane.removeEventListener('pointermove', onTimelinePointerMove);
         rightPane.removeEventListener('pointerup', onTimelinePointerUp);
         rightPane.releasePointerCapture(e.pointerId);
 
         if ($CurrentKeyframeSelection.selectKeyframeIds(getKeyframeIdsFromRect(rightPane, selectionRect))) {
+            if (previousSelection) {
+                $CurrentKeyframeSelection.selectKeyframeIds(previousSelection);
+            }
             notifyKeyframeSelectionChanged();
         }
 
+        previousSelection = null;
         selectionRectPivot = null;
         selectionRect = null;
     }
@@ -188,8 +207,14 @@
             return;
         }
 
+        $TimelineIsWorking = true;
+
         const index = info.animation.getIndexOfKeyframe(keyframe);
         const next = index === -1 ? null : info.animation.getKeyframeAtIndex(index + 1);
+
+        if (next != null && (e.ctrlKey || e.metaKey)) {
+            CurrentTime.set(Math.round((keyframe.offset + next.offset) / 2));
+        }
 
         const selection = $CurrentKeyframeSelection;
 
@@ -211,11 +236,19 @@
         if (e.button !== MouseButton.Left) {
             return;
         }
+
+        if (e.ctrlKey || e.metaKey) {
+            CurrentTime.set(keyframe.offset);
+        }
+
+        $TimelineIsWorking = true;
+
         if ($CurrentKeyframeSelection.selectKeyframe(keyframe, e.shiftKey)) {
             notifyKeyframeSelectionChanged();
         } else if (e.shiftKey) {
             deselectKeyframe = keyframe;
         }
+
         prepareMove(e, keyframe);
     }
 
@@ -256,7 +289,7 @@
         if (isMoving && startOffset !== startKeyframe.offset) {
             const project = $CurrentProject;
 
-            // changed
+            // we directly fix keyframes, animated properties are updated below
             for (const animation of currentSelectionData.animations) {
                 animation.fixKeyframes(currentSelectionData.keyframes);
             }
@@ -273,6 +306,8 @@
         }
 
         destroyMove(e);
+
+        $TimelineIsWorking = false;
     }
 
     function onAddKeyframe(e: CustomEvent<AnimatedProperty>) {
@@ -283,6 +318,8 @@
         const time = $CurrentTime;
         if (e.detail.animation.getKeyframeAtOffset(time) == null) {
             const keyframe = e.detail.animation.addKeyframeAtOffset(time, null);
+            // TODO: improve this
+            $CurrentProject.middleware.updateAnimations({animations: new Set([e.detail.animation])});
             $CurrentKeyframeSelection.clear();
             $CurrentKeyframeSelection.selectKeyframe(keyframe);
             snapshot();
@@ -311,7 +348,7 @@
     }
 
     function checkKeyframeSelection(filterMode: TimelineFilterMode, selection: Selection<any>) {
-        if (filterMode !== TimelineFilterMode.Selected && filterMode !== TimelineFilterMode.SelectedAndAnimated) {
+        if (filterMode === TimelineFilterMode.AllSelectedOrAnimated || filterMode === TimelineFilterMode.OnlyAnimated) {
             return;
         }
         if ($CurrentKeyframeSelection.deselectUnselectedElements(selection)) {
@@ -319,9 +356,35 @@
         }
     }
 
+    async function scrollElementIntoView(element: Element | null) {
+        if (element == null) {
+            return;
+        }
+
+        await tick();
+
+        const item = leftPane.querySelector(`[data-element-id="${element.id}"]`) as HTMLElement;
+        if (!item) {
+            return;
+        }
+
+        const scroll = item.offsetTop - leftPane.offsetTop;
+
+        if ((scroll < leftPane.scrollTop) || (scroll + item.offsetHeight > leftPane.scrollTop + leftPane.offsetHeight)) {
+            item.scrollIntoView();
+        }
+    }
+
+    let playLine: HTMLElement;
+
     $: checkKeyframeSelection($CurrentTimelineFilterMode, $CurrentSelection);
+    $: $TimelineFollowMode && $CurrentTimelineFilterMode !== null && scrollElementIntoView($CurrentSelectedElement);
+
+    // use on individual elements
+    $: playLine && playLine.style.setProperty('--timeline-play-offset', $CurrentTime.toString());
+    $: playLine && playLine.style.setProperty('--timeline-scroll-top', scrollTop + 'px');
 </script>
-<div class="timeline">
+<div class="timeline" on:contextmenu>
     <div bind:this={leftPane} on:scroll={handleScroll} on:wheel={handleWheel}
          class="timeline-elements scroll scroll-invisible scroll-no-padding" hidden-x>
         {#each $CurrentAnimatedElements as animated (animated.element.id)}
@@ -356,7 +419,7 @@
             {/each}
         </div>
         <TimelineSelectionRect rect={selectionRect} />
-        <div class="timeline-play-line"></div>
+        <div bind:this={playLine} class="timeline-play-line"></div>
     </div>
 </div>
 <style global>
@@ -368,6 +431,7 @@
 
         --timeline-item-height: var(--spectrum-alias-item-height-s);
         --timeline-keyframe-size: calc(var(--timeline-item-height) / 2 + 1px);
+        /*--timeline-keyframe-size: calc(var(--timeline-item-height) / 2 + 3px);*/
 
         background: var(--spectrum-global-color-gray-100);
     }

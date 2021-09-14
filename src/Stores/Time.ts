@@ -17,7 +17,7 @@
 import {CurrentDocumentAnimation, CurrentProject, CurrentSelection} from "./Project";
 import {CurrentTimelineFilterMode, TimelineFilterMode} from "./App";
 import {derived, writable} from "svelte/store";
-import type {AnimatedProperties, Animation, Animator, AnimatorSource, DocumentAnimation} from "../Core";
+import type {AnimatedProperties, Animation, Animator, AnimatorSource, DocumentAnimationMap} from "../Core";
 import type {Element, Selection} from "@zindex/canvas-engine";
 
 const MAX_TIME_SCALE = 1.5;
@@ -26,22 +26,36 @@ export const CurrentTime = writable<number>(0);
 export const CurrentMaxTime = derived([CurrentDocumentAnimation, CurrentTime],
     ([$animation, $time]) => Math.max($time, $animation ? $animation.endTime : 0) * MAX_TIME_SCALE);
 
+const EMPTY_ARRAY = [];
 export const CurrentAnimatedElements = derived(
     [CurrentProject, CurrentDocumentAnimation, CurrentSelection, CurrentTimelineFilterMode],
     ([$project, $animation, $selection, $filter]): AnimatedElement[] => {
         if (!$animation) {
-            return [];
+            return EMPTY_ARRAY;
         }
 
-        if ($filter === TimelineFilterMode.Selected) {
-            return getAnimatedElements(getSelectedElementsProperties($animation, $selection), $project.animatorSource, true);
+        switch ($filter) {
+            case TimelineFilterMode.OnlySelected:
+                if ($selection.isEmpty) {
+                    return EMPTY_ARRAY;
+                }
+                return getAnimatedElements(getSelectedElementsProperties($animation, $selection), $project.animatorSource, true);
+            case TimelineFilterMode.OnlySelectedAndAnimated:
+                if ($selection.isEmpty || $animation.isEmpty) {
+                    return EMPTY_ARRAY;
+                }
+                return getAnimatedElements(getSelectedAndAnimatedElementsProperties($animation, $selection), $project.animatorSource);
+            case TimelineFilterMode.OnlyAnimated:
+                if ($animation.isEmpty) {
+                    return EMPTY_ARRAY;
+                }
+                return getAnimatedElements($animation.getAnimatedElements(), $project.animatorSource);
+            default:
+                if ($selection.isEmpty && $animation.isEmpty) {
+                    return EMPTY_ARRAY;
+                }
+                return getAnimatedElements(getSelectedOrAnimatedElementsProperties($animation, $selection), $project.animatorSource, true);
         }
-
-        if ($filter === TimelineFilterMode.SelectedAndAnimated) {
-            return getAnimatedElements(getSelectedAndAnimatedElementsProperties($animation, $selection), $project.animatorSource);
-        }
-
-        return getAnimatedElements($animation.getAnimatedElements(), $project.animatorSource);
     });
 
 export type AnimatedProperty = {
@@ -56,13 +70,25 @@ export type AnimatedElement = {
 }
 
 const EMPTY = {};
-function *getSelectedElementsProperties(animation: DocumentAnimation, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
+function *getSelectedElementsProperties(animation: DocumentAnimationMap, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
     for (const element of selection) {
         yield [element, animation.getAnimatedProperties(element) || EMPTY];
     }
 }
 
-function *getSelectedAndAnimatedElementsProperties(animation: DocumentAnimation, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
+function *getSelectedOrAnimatedElementsProperties(animation: DocumentAnimationMap, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
+    for (const element of selection) {
+        if (!animation.hasAnimatedProperties(element)) {
+            yield [element, EMPTY];
+        }
+    }
+
+    if (!animation.isEmpty) {
+        yield * animation.getAnimatedElements();
+    }
+}
+
+function *getSelectedAndAnimatedElementsProperties(animation: DocumentAnimationMap, selection: Selection<any>): Generator<[Element, AnimatedProperties<Element>]> {
     for (const entry of animation.getAnimatedElements()) {
         if (selection.isSelected(entry[0])) {
             yield entry;

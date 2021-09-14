@@ -2,12 +2,16 @@
     import {CurrentProject, CurrentDocument, CurrentSelection, ShowTreeReverse, IsPlaying, notifySelectionChanged} from "../Stores";
     import type {Element, Document, MoveElementMode, Selection} from "@zindex/canvas-engine";
     import SpTreeView from "../Controls/SpTreeView";
-    import {ElementInfoMap} from "./Mapping";
+    import {ElementInfoMap} from "../Core";
     import EditElementNameDialog from "./Dialogs/EditElementNameDialog.svelte";
     import {getContext} from "svelte";
-    import type {OpenDialogFunction} from "./DialogType";
-
-    const openDialog = getContext<OpenDialogFunction>('openDialog');
+    import {
+        deleteSelectedElements,
+        duplicateSelectedElements,
+        groupSelected,
+        showDialog,
+        unGroupSelected
+    } from "../actions";
 
     export let collapsed: boolean = false;
 
@@ -20,48 +24,70 @@
     }
 
     function onDrop(e: CustomEvent<{element: Element, target: Element, mode: MoveElementMode, selection: Selection<Document>}>) {
+        if ($CurrentProject.middleware.toolIsWorking) {
+            return;
+        }
         if ($CurrentProject.middleware.sendToTarget(e.detail.element, e.detail.target, e.detail.mode, e.detail.selection)) {
             snapshot();
         }
     }
 
     function onLock(e: CustomEvent<Element>) {
+        if ($CurrentProject.middleware.toolIsWorking) {
+            return;
+        }
         e.detail.locked = !e.detail.locked;
         snapshot();
     }
 
     function onHide(e: CustomEvent<Element>) {
+        if ($CurrentProject.middleware.toolIsWorking) {
+            return;
+        }
         e.detail.hidden = !e.detail.hidden;
         snapshot();
     }
 
-    function onEditTitle(e: CustomEvent<Element>) {
-        openDialog({
+    async function onEditTitle(e: CustomEvent<Element>) {
+        if ($CurrentProject.middleware.toolIsWorking) {
+            return;
+        }
+
+        const value = e.detail.title || '';
+        const title = await showDialog<string>(EditElementNameDialog, {
             title: 'Rename element',
-            value: e.detail.title || '',
             dismissable: false,
-            size: 'small',
+            size: 's',
             confirm: {
                 label: 'Rename',
-                action: async (value: string) => {
-                    value = value.trim();
-                    if (e.detail.title === value) {
-                        return;
-                    }
-                    e.detail.title = value;
-                    $CurrentProject.state.snapshot();
-                }
+                action: async (value: string) => value.trim()
             },
             cancel: {
                 label: 'Cancel'
-            }
-        }, EditElementNameDialog);
+            },
+            value,
+        });
+
+        if (title !== value) {
+            e.detail.title = title;
+            $CurrentProject.state.snapshot();
+        }
     }
 
     function onDelete() {
-        if ($CurrentProject.middleware.deleteSelectedElements()) {
-            snapshot();
-        }
+        deleteSelectedElements($CurrentProject);
+    }
+
+    function doGroup() {
+        groupSelected($CurrentProject);
+    }
+
+    function doUngroup(e: PointerEvent) {
+        unGroupSelected($CurrentProject, !e.altKey);
+    }
+
+    function doDuplicate() {
+        duplicateSelectedElements($CurrentProject);
     }
 
     function snapshot() {
@@ -69,10 +95,17 @@
         project.state.snapshot();
         project.engine?.invalidate();
     }
+
+    function clearSelection() {
+        if ($CurrentSelection.clear()) {
+            notifySelectionChanged();
+            $CurrentProject.engine?.invalidate();
+        }
+    }
 </script>
-<div on:contextmenu class="tree-wrapper">
+<div on:focusin on:contextmenu class="tree-wrapper">
     {#if !collapsed}
-        <div class="scroll scroll-no-hide" on:click|self={() => $CurrentSelection.clear() && notifySelectionChanged()}>
+        <div class="scroll scroll-no-hide" on:click|self={clearSelection}>
             <SpTreeView
                     reverse={$ShowTreeReverse}
                     document={$CurrentDocument}
@@ -86,34 +119,26 @@
                     on:selection={onSelection} />
         </div>
         <div class="tree-tools">
-            <sp-action-button
-                    title="Delete elements"
-                    class="very-small"
-                    disabled={noSelection || $IsPlaying}
-                    on:click={onDelete} size="s" quiet>
-                <sp-icon slot="icon" size="s" name="workflow:Delete"></sp-icon>
+            <sp-action-button quiet title="Duplicate" on:click={doDuplicate} disabled={noSelection || $IsPlaying} size="s" class="very-small">
+                <sp-icon size="s" name="workflow:Duplicate" slot="icon"></sp-icon>
             </sp-action-button>
-<!--            <sp-action-group compact quiet class="very-small">-->
-<!--                <sp-action-button disabled={noSelection} title="Bring forward" size="s">-->
-<!--                    <sp-icon name="expr:bring-forward" size="s"></sp-icon>-->
-<!--                </sp-action-button>-->
-<!--                <sp-action-button disabled={noSelection} title="Bring to front" size="s">-->
-<!--                    <sp-icon name="expr:bring-front" size="s"></sp-icon>-->
-<!--                </sp-action-button>-->
-<!--                <sp-action-button disabled={noSelection} title="Send backward" size="s">-->
-<!--                    <sp-icon name="expr:send-backward" size="s"></sp-icon>-->
-<!--                </sp-action-button>-->
-<!--                <sp-action-button disabled={noSelection} title="Send to back" size="s">-->
-<!--                    <sp-icon name="expr:send-back" size="s"></sp-icon>-->
-<!--                </sp-action-button>-->
-<!--            </sp-action-group>-->
-            {#if $CurrentDocument}
-                <sp-picker readonly={$IsPlaying} size="s" value="{$CurrentDocument.id}" quiet>
-                    {#each Array.from($CurrentProject.getDocuments()) as doc (doc.id)}
-                        <sp-menu-item value="{doc.id}">{doc.title || '(document)'}</sp-menu-item>
-                    {/each}
-                </sp-picker>
-            {/if}
+            <sp-action-button quiet title="Group" on:click={doGroup} disabled={noSelection || $IsPlaying} size="s" class="very-small">
+                <sp-icon size="s" name="workflow:Group" slot="icon"></sp-icon>
+            </sp-action-button>
+            <sp-action-button quiet title="Ungroup" on:click={doUngroup} disabled={noSelection || $IsPlaying} size="s" class="very-small">
+                <sp-icon size="s" name="workflow:Ungroup" slot="icon"></sp-icon>
+            </sp-action-button>
+            <div style="flex: 1"></div>
+            <sp-action-button quiet title="Delete elements" on:click={onDelete} disabled={noSelection || $IsPlaying} size="s" class="very-small">
+                <sp-icon size="s" name="workflow:Delete" slot="icon"></sp-icon>
+            </sp-action-button>
+            <!--{#if $CurrentDocument}-->
+            <!--    <sp-picker readonly={$IsPlaying} size="s" value="{$CurrentDocument.id}" quiet>-->
+            <!--        {#each Array.from($CurrentProject.getDocuments()) as doc (doc.id)}-->
+            <!--            <sp-menu-item value="{doc.id}">{doc.title || '(document)'}</sp-menu-item>-->
+            <!--        {/each}-->
+            <!--    </sp-picker>-->
+            <!--{/if}-->
         </div>
     {/if}
 </div>
@@ -130,22 +155,19 @@
     }
 
     .tree-tools {
-        width: 100%;
         overflow: hidden;
         display: flex;
+        gap: var(--spectrum-global-dimension-size-100);
         flex-direction: row;
         align-items: center;
-        justify-content: space-between;
         box-sizing: content-box;
         border-top: 2px solid var(--separator-color);
         height: var(--spectrum-alias-item-height-m);
     }
-
     .tree-tools > :first-child {
         margin-left: var(--spectrum-global-dimension-size-100);
     }
     .tree-tools > :last-child {
         margin-right: var(--spectrum-global-dimension-size-100);
     }
-
 </style>

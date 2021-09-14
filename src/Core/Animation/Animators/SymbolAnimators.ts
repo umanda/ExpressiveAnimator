@@ -27,7 +27,7 @@ export const SymbolAnimators: ElementAnimatorMap<AnimatedSymbolElement> = {
         title: 'Time',
         type: 'symbol',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('time', 'symbol');
         }
     }
 }

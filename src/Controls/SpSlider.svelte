@@ -11,6 +11,7 @@
     export let value: number;
 
     export let label: string = undefined;
+    export let labelVisibility: 'text' | 'value' | 'none' = undefined;
     export let variant: 'filled' | 'ramp' | 'range' | 'tick' = undefined;
     export let tickStep: number = undefined;
     export let tickLabels: boolean = false;
@@ -28,6 +29,7 @@
     export let disabled: boolean = false;
     export let readonly: boolean = false;
     export let editable: boolean = false;
+
 
     let slider: Slider = undefined;
     let input: NumberField = undefined;
@@ -149,6 +151,7 @@
 
         label={label}
         hide-value-label={hideLabel ? '' : undefined}
+        label-visibility={labelVisibility}
         variant={variant}
         tickStep={tickStep}
         tickLabels={tickLabels}

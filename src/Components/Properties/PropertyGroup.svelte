@@ -21,7 +21,7 @@
         margin-bottom: var(--spectrum-global-dimension-size-150);
         text-transform: uppercase;
         letter-spacing: 2px;
-        font-weight: lighter;
+        /*font-weight: lighter;*/
         font-size: var(--spectrum-global-dimension-font-size-50);
     }
     .properties {

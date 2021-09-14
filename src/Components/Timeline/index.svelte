@@ -25,19 +25,21 @@
         }
     }
 
-    $: wrapper && wrapper.style.setProperty('--timeline-play-offset', $CurrentTime.toString());
+    // Use on individual elements to avoid a huge style recalculation
+
+    //$: wrapper && wrapper.style.setProperty('--timeline-play-offset', $CurrentTime.toString());
     $: wrapper && wrapper.style.setProperty('--timeline-max-offset', $CurrentMaxTime.toString());
     $: wrapper && wrapper.style.setProperty('--timeline-ms-unit', (zoom * UNIT) + 'px');
-    $: wrapper && wrapper.style.setProperty('--timeline-scroll-top', scrollTop + 'px');
-    $: wrapper && wrapper.style.setProperty('--timeline-scroll-left', scrollLeft + 'px');
+    // $: wrapper && wrapper.style.setProperty('--timeline-scroll-top', scrollTop + 'px');
+    // $: wrapper && wrapper.style.setProperty('--timeline-scroll-left', scrollLeft + 'px');
 </script>
-<div bind:this={wrapper} class="timeline-wrapper">
+<div on:focusin on:pointerdown bind:this={wrapper} class="timeline-wrapper">
     {#if !collapsed}
         <div class="timeline-controls-wrapper">
             <TimelineControls />
             <TimelineRuler zoom={zoom} scaleFactor={scaleFactor} scroll={scrollLeft}/>
         </div>
-        <Timeline zoom={zoom} scaleFactor={scaleFactor} bind:scrollTop bind:scrollLeft />
+        <Timeline on:contextmenu zoom={zoom} scaleFactor={scaleFactor} bind:scrollTop bind:scrollLeft />
         <TimelineActionBar bind:zoom />
     {/if}
 </div>

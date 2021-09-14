@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import type {Cloneable} from "@zindex/canvas-engine";
+import type {Cloneable, JSONSerializable} from "@zindex/canvas-engine";
 import type {Easing} from "./Easing";
 import {uuid} from "@zindex/canvas-engine";
 
-export class Keyframe<T> implements Cloneable<Keyframe<T>> {
+export class Keyframe<T> implements Cloneable<Keyframe<T>>, JSONSerializable {
     public readonly id: string;
     public value: T;
     public offset: number;
@@ -34,5 +34,30 @@ export class Keyframe<T> implements Cloneable<Keyframe<T>> {
     clone(newId?: boolean): Keyframe<T> {
         // T should be immutable
         return new Keyframe<T>(this.value, this.offset, this.easing, newId ? null : this.id);
+    }
+
+    static fromJSON(json) {
+        return new Keyframe(json.value, json.offset, json.easing);
+    }
+
+    withOffset(offset: number, newId?: boolean): Keyframe<T> {
+        return new Keyframe<T>(this.value, offset, this.easing, newId ? null : this.id);
+    }
+
+    withValue(value: T, newId?: boolean): Keyframe<T> {
+        return new Keyframe<T>(value, this.offset, this.easing, newId ? null : this.id);
+    }
+
+    withEasing(easing: Easing | null, newId?: boolean): Keyframe<T> {
+        return new Keyframe<T>(this.value, this.offset, easing, newId ? null : this.id);
+    }
+
+    toJSON() {
+        // we don't save id
+        return {
+            value: this.value,
+            offset: this.offset,
+            easing: this.easing,
+        };
     }
 }

@@ -17,16 +17,16 @@
 import type {ElementAnimatorMap} from "../Animator";
 import type {PathElement} from "@zindex/canvas-engine";
 import {VectorAnimators} from "./CommonAnimators";
-import {PathAnimation} from "./CommonAnimations";
+import {PathNodesAnimation} from "./CommonAnimations";
 
 export const PathAnimators: ElementAnimatorMap<PathElement> = {
     ...(VectorAnimators as ElementAnimatorMap<PathElement>),
-    path: {
-        id: 'path',
-        title: 'Path',
+    nodes: {
+        id: 'nodes',
+        title: 'Morph',
         type: 'path',
         create() {
-            return new PathAnimation();
+            return new PathNodesAnimation('nodes', 'path');
         }
     }
 }

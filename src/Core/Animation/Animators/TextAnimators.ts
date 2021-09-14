@@ -20,5 +20,4 @@ import type {TextElement} from "@zindex/canvas-engine";
 
 export const TextAnimators: ElementAnimatorMap<TextElement> = {
     ...(VectorAnimators as ElementAnimatorMap<TextElement>),
-    // TODO: add size animator? other text animators...
 }

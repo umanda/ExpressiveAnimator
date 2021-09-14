@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-import {html, svg, nothing} from "@spectrum-web-components/base";
+import {html, svg, unsafeCSS, nothing} from "@spectrum-web-components/base";
 import type {TemplateResult} from "@spectrum-web-components/base";
+import {Overlay} from "@spectrum-web-components/overlay";
+
+function nop() {}
 
 export async function patchSpectrum() {
+    // Do not allow close with escape
+    Overlay["overlayStack"]["handleKeyUp"] = nop;
+
     await patchIcon();
     await patchNumberField();
     await patchSlider();
     await patchPicker();
+    await patchMenu();
     await patchTabPanel();
     await patchColorLoupe();
 }
@@ -75,12 +82,45 @@ async function patchTabPanel() {
 
 async function patchPicker() {
     await customElements.whenDefined('sp-picker');
-    const picker = customElements.get('sp-picker');
+    const picker = customElements.get('sp-picker') as any;
     const open = picker.openOverlay;
     picker.openOverlay = async function (target: HTMLElement, interaction, content, options) {
         interaction = target.hasAttribute("interaction") ? target.getAttribute("interaction") : "modal";
         return open(target, interaction, content, options);
     };
+}
+
+async function patchMenu() {
+    await customElements.whenDefined('sp-menu');
+    const menu = customElements.get('sp-menu') as any;
+
+    const scroll = unsafeCSS(`:host {
+        overflow-x: hidden;
+        --scrollbar-width: 6px;
+        --scrollbar-color: var(--spectrum-global-color-gray-500);
+      }
+      :host::-webkit-scrollbar {
+        width: var(--scrollbar-width);
+        height: var(--scrollbar-width);
+      }
+      :host::-webkit-scrollbar-corner {
+        display: none;
+      }
+      :host::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      :host::-webkit-scrollbar-thumb {
+        background: var(--scrollbar-color);
+      }`);
+
+    const prop = Object.getOwnPropertyDescriptor(menu, 'styles');
+    const get = prop.get;
+    prop.get = function () {
+        const styles = get.call(this);
+        styles.push(scroll);
+        return styles;
+    }
+    Object.defineProperty(menu, 'styles', prop);
 }
 
 async function patchIcon() {

@@ -16,4 +16,8 @@
 
 export * from "./SelectionTool";
 export * from "./TransformTool";
+export * from "./PathTool";
+export * from "./PenTool";
+export * from "./ColorPickerTool";
+export * from "./GradientTool";
 export * from "./KeyframeCounter";

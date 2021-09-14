@@ -8,8 +8,7 @@
     let disabledAlign: boolean = false, disableDistribute: boolean = false;
 
     $: disabledAlign = !$CurrentSelection || $CurrentSelection.isEmpty;
-    // TODO: finish distribute
-    $: disableDistribute = true || !$CurrentSelection || $CurrentSelection.length < 3;
+    $: disableDistribute = !$CurrentSelection || $CurrentSelection.length < 3;
 
     function align(e: PointerEvent) {
         if (readonly) {

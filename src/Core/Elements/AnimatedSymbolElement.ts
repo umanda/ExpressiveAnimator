@@ -34,9 +34,20 @@ export class AnimatedSymbolElement extends SymbolElement {
         return this._time;
     }
 
-    clone(newId?: boolean): AnimatedSymbolElement {
-        const clone = super.clone(newId) as AnimatedSymbolElement;
+    protected cloneCurrent(): AnimatedSymbolElement {
+        const clone = new AnimatedSymbolElement(this._reference);
         clone._time = this._time;
         return clone;
+    }
+
+    protected applyJSON(json) {
+        this._time = json.time || 0;
+        super.applyJSON(json);
+    }
+
+    toJSON() {
+        const json = super.toJSON();
+        json.time = this._time;
+        return json;
     }
 }

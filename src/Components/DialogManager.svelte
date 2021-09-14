@@ -31,8 +31,8 @@
 <div style="z-index: 1000; position: absolute">
     {#each items as item}
         <Dialog data={item.dialog} on:close={() => onClose(item)}>
-            <svelte:fragment let:isWorking let:closeDialog let:value>
-                <svelte:component this={item.component} {...item.props} bind:value={item.dialog.value} isWorking={isWorking} closeDialog={closeDialog} />
+            <svelte:fragment let:isWorking let:action>
+                <svelte:component this={item.component} {...item.props} bind:value={item.dialog.value} isWorking={isWorking} action={action} />
             </svelte:fragment>
         </Dialog>
     {/each}

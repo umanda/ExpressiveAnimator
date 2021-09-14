@@ -1,7 +1,16 @@
 <script lang="ts">
     import SpSlider from "../../../Controls/SpSlider.svelte";
-    import {BrushType, LinearGradientBrush, RadialGradientBrush, VectorElement} from "@zindex/canvas-engine";
-    import type {Brush, GradientBrush, SolidBrush} from "@zindex/canvas-engine";
+    import {BrushType, Point, Rectangle, VectorElement} from "@zindex/canvas-engine";
+    import type {
+        Brush,
+        SolidBrush,
+        StopColor,
+        GradientBrush,
+        ConicalGradientBrush,
+        LinearGradientBrush,
+        RadialGradientBrush,
+        TwoPointGradientBrush,
+    } from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
     import {AnimationProject} from "../../../Core";
 
@@ -20,32 +29,84 @@
     let opacityProperty: string;
     $: opacityProperty = showFill ? 'fillOpacity' : 'strokeOpacity';
 
-    function getBackground(value: Brush, opacity: number): string {
-        let picture: string;
+    function toSvgStopColor(stop: StopColor): string {
+        return `<stop offset="${Math.round(stop.offset * 100)}%" stop-color="${stop.color.rgba}" />`;
+    }
+
+    function getBackgroundPicture(value: Brush): string {
         switch (value.type) {
             case BrushType.None:
-                picture = 'linear-gradient(-45deg, transparent 0%, transparent 47.5%, #f00 47.5%, #f00 52.5%, transparent 52.5%, transparent 100%)';
-                break;
+                return 'linear-gradient(-45deg, transparent 0%, transparent 47.5%, #f00 47.5%, #f00 52.5%, transparent 52.5%, transparent 100%)';
             case BrushType.Solid:
-                picture = (value as SolidBrush).color.toString();
-                break;
+                return (value as SolidBrush).color.toString();
             case BrushType.LinearGradient:
-                const angle = (value as LinearGradientBrush).start.getPositiveAngleTo((value as LinearGradientBrush).end) - 90;
-                picture = `linear-gradient(${angle}deg, ${(value as GradientBrush).stopColors.toString()})`;
-                break;
+                const angle = (value as LinearGradientBrush).start.getPositiveAngleTo((value as LinearGradientBrush).end) + 90;
+                return `linear-gradient(${angle}deg, ${(value as GradientBrush).stopColors.toString()})`;
             case BrushType.RadialGradient:
-            case BrushType.TwoPointGradient: // TODO: do not use the same picture as radial
-                picture = `radial-gradient(${(value as GradientBrush).stopColors.toString()})`;
-                break;
+                return `radial-gradient(${(value as GradientBrush).stopColors.toString()})`;
+            case BrushType.TwoPointGradient:
+
+                let gradient = value as TwoPointGradientBrush;
+
+                let cr = 0, fx = 0, fy = 0, fr = 0;
+
+                const p = gradient.start.sub(gradient.end);
+                const size = 2 * Math.max(gradient.startRadius, gradient.endRadius, Math.abs(p.x), Math.abs(p.y)) / 100;
+
+                if (size !== 0) {
+                    cr = gradient.endRadius / size;
+                    fx = p.x / size;
+                    fy = p.y / size;
+                    fr = gradient.startRadius / size;
+                }
+
+                const str = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+<radialGradient id="gradient" cx="50%" cy="50%" r="${cr}%" fx="${50 + fx}%" fy="${50 + fy}%" fr="${fr}%">
+${gradient.stopColors.list.map(toSvgStopColor).join('')}
+</radialGradient>
+<rect width="100%" height="100%" fill="url(#gradient)" />
+</svg>`;
+
+                return `url("data:image/svg+xml;base64,${window.btoa(str)}")`;
             case BrushType.ConicalGradient:
-                picture = `conic-gradient(from 90deg, ${(value as GradientBrush).stopColors.toString()})`;
-                break;
+                const conic = value as ConicalGradientBrush;
+                if (conic.startAngle === 0 && conic.endAngle === 360) {
+                    return `conic-gradient(from 90deg, ${(value as GradientBrush).stopColors.toString()})`;
+                }
+                const prepend = conic.startAngle > 0
+                    ? `${conic.stopColors.list[0].color.rgba} 0deg ${conic.startAngle}deg, `
+                    : '';
+                const append = conic.endAngle < 360
+                    ? `, ${conic.stopColors.list[conic.stopColors.list.length - 1].color.rgba} ${conic.endAngle}deg 360deg`
+                    : '';
+                const diff = conic.endAngle - conic.startAngle;
+                return `conic-gradient(from 90deg, ${prepend}${conic.stopColors.list.map(s => `${s.color.rgba} ${conic.startAngle + s.offset * diff}deg`)}${append})`;
             case BrushType.Pattern:
-                picture = 'repeating-linear-gradient(transparent, #808080 20%), repeating-linear-gradient(90deg, #fff, #000 20%)';
-                break;
+                return 'repeating-linear-gradient(transparent, #808080 20%), repeating-linear-gradient(90deg, #fff, #000 20%)';
             default:
-                picture = 'transparent';
-                break;
+                return 'transparent';
+        }
+    }
+
+    const bgCache = {
+        fill: {
+            value: null,
+            picture: null
+        },
+        strokeBrush: {
+            value: null,
+            picture: null
+        }
+    }
+
+    function getBackground(brush: Brush, opacity: number, cache: {value: Brush, picture: string | null}): string {
+        let picture: string;
+
+        if (brush === cache.value && cache.picture != null) {
+            picture = cache.picture;
+        } else {
+            cache.value = brush;
+            picture = cache.picture = getBackgroundPicture(brush);
         }
 
         // this is a trick to also set opacity
@@ -98,8 +159,11 @@
 </script>
 <div class="brush-switch">
     <div class="thumbnail-wrapper">
-        <sp-thumbnail title="Fill" background="{getBackground(value.fill, value.fillOpacity)}" selected={showFill ? '' : undefined} on:click={() => showFill = true} class="fill"></sp-thumbnail>
-        <sp-thumbnail title="Stroke" background="{getBackground(value.strokeBrush, value.strokeOpacity)}" selected={!showFill ? '' : undefined} on:click={() => showFill = false} class="stroke"></sp-thumbnail>
+        <sp-thumbnail title="Fill" background="{getBackground(value.fill, value.fillOpacity, bgCache.fill)}"
+                      selected={showFill ? '' : undefined} on:click={() => showFill = true} class="fill"></sp-thumbnail>
+        <sp-thumbnail title="Stroke" background="{getBackground(value.strokeBrush, value.strokeOpacity, bgCache.strokeBrush)}"
+                      selected={!showFill ? '' : undefined} on:click={() => showFill = false}
+                      class="stroke"></sp-thumbnail>
         <div class="action-icon"
              on:click={onCopy} title="{showFill ? 'Copy Stroke' : 'Copy Fill'}" style="bottom: 0; left: 0">
             <sp-icon name="{showFill ? 'expr:swap-arrow-up-left' : 'expr:swap-arrow-down-right'}" size="s"></sp-icon>
@@ -118,7 +182,7 @@
               on:end
               on:input={e => dispatch('update', {property: opacityProperty, value: e.detail})}
               on:start={() => dispatch('start', {property: opacityProperty, value: value[opacityProperty]})}
-              />
+    />
 </div>
 
 <style>

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import {MouseButton} from "../../../CanvasEngine";
+import {MouseButton} from "@zindex/canvas-engine";
 
 export function formatNumber(value: number, digits: number): string {
     if (Number.isNaN(value) || !Number.isFinite(value)) {

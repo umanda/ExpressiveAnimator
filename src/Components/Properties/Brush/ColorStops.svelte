@@ -1,6 +1,6 @@
 <script lang="ts">
     import type {Color} from "@zindex/canvas-engine";
-    import ColorControl from "./Color.svelte";
+    import ColorComponent from "../../../Controls/ColorComponent.svelte";
     import {createEventDispatcher, onDestroy, tick} from "svelte";
     import {StopColorList} from "@zindex/canvas-engine";
     import type {GradientSlider} from "../../../SpectrumExtra/GradientSlider";
@@ -63,7 +63,7 @@
         }
     });
 </script>
-<ColorControl
+<ColorComponent
         on:start={onColorStart}
         on:end={onColorStop}
         on:update={onColorInput}
@@ -84,7 +84,7 @@
             small
     ></sp-gradient-slider>
     <slot />
-</ColorControl>
+</ColorComponent>
 <style>
     sp-gradient-slider {
         width: auto;

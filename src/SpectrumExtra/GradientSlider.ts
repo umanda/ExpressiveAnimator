@@ -24,8 +24,8 @@ import {
 } from '@spectrum-web-components/base';
 import { Focusable } from '@spectrum-web-components/shared/src/focusable.js';
 import type { ColorHandle } from '@spectrum-web-components/color-handle';
-import type {Color, StopColor, StopColorList} from "../../../CanvasEngine";
-import {WritableStopColorList} from "../../../CanvasEngine";
+import type {Color, StopColor, StopColorList} from "@zindex/canvas-engine";
+import {WritableStopColorList} from "@zindex/canvas-engine";
 
 const styles = css`
 :host {touch-action: none;}
@@ -390,6 +390,7 @@ export class GradientSlider extends Focusable {
 
         return value.list.map((stop: StopColor, index: number) => html`
                 <sp-color-handle
+                        title="${Math.round(stop.offset * 100) + '%'}"
                         ?selected=${index === selected}
                         ?focus=${canFocus && (index === selected)}
                         data-index="${index}"

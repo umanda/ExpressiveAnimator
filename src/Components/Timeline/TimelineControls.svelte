@@ -1,20 +1,23 @@
 <script lang="ts">
     import {CurrentDocumentAnimation, CurrentTime, CurrentProject, IsPlaying} from "../../Stores";
-    import {AnimationProject, DocumentAnimation} from "../../Core";
+    import {AnimationProject, DocumentAnimationMap} from "../../Core";
     import {formatTime} from "./utils";
     import TimelineAdd from "./TimelineAdd.svelte";
 
     let animationHandle: number = null;
     let animationStartTime: number;
+    let isRecording: boolean;
+    let isPlaying: boolean;
+
     $: isRecording = ($CurrentProject as AnimationProject).isRecording;
     $: isPlaying = animationHandle !== null;
 
     function goToEnd() {
-        $CurrentTime = ($CurrentDocumentAnimation as DocumentAnimation).endTime;
+        $CurrentTime = ($CurrentDocumentAnimation as DocumentAnimationMap).endTime;
     }
 
     function goToStart() {
-        $CurrentTime = ($CurrentDocumentAnimation as DocumentAnimation).startTime;
+        $CurrentTime = ($CurrentDocumentAnimation as DocumentAnimationMap).startTime;
     }
 
     function toggleRecording() {
@@ -28,7 +31,7 @@
             $IsPlaying = false;
             return;
         }
-        const endTime = ($CurrentDocumentAnimation as DocumentAnimation).endTime;
+        const endTime = ($CurrentDocumentAnimation as DocumentAnimationMap).endTime;
         animationStartTime = performance.now();
         let f = () => {
             let now = performance.now();
@@ -84,12 +87,13 @@
         width: 100%;
         height: 100%;
         z-index: 5;
+        padding: 0 var(--spectrum-global-dimension-size-50);
     }
     .timeline-controls-time {
-        padding: 0 4px;
+        padding: 0;
         line-height: 32px;
         vertical-align: middle;
-        font-size: 12px;
+        font-size: 14px;
         text-align: center;
         flex: 1;
     }

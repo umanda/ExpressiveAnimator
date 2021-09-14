@@ -14,43 +14,28 @@
  * limitations under the License.
  */
 
-import {Rectangle, SingleBoardDocument, Size} from "@zindex/canvas-engine";
-import type {DocumentAnimation} from "../Animation";
+import {SingleBoardDocument} from "@zindex/canvas-engine";
+import {DocumentAnimationMap} from "../Animation";
+import type {AnimationProject} from "./AnimationProject";
 
 export class AnimationDocument extends SingleBoardDocument {
 
-    protected _animation: DocumentAnimation = null;
+    protected _animationMap: DocumentAnimationMap = null;
 
-    constructor(size: Size, id?: string|null) {
-        super(size, id);
+    get animation(): DocumentAnimationMap | null {
+        return this._animationMap;
     }
 
-    get board(): Rectangle {
-        return this._board;
-    }
-
-    set board(value: Rectangle) {
-        if (this._board.equals(value)) {
-            return;
-        }
-        this._board = value;
-        this.invalidateBoundsAndPicture();
-    }
-
-    get animation(): DocumentAnimation | null {
-        return this._animation;
-    }
-
-    set animation(value: DocumentAnimation | null) {
+    set animation(value: DocumentAnimationMap | null) {
         if (value.document !== this) {
             return;
         }
 
-        if (this._animation) {
-            this._animation.dispose();
+        if (this._animationMap) {
+            this._animationMap.dispose();
         }
 
-        this._animation = value;
+        this._animationMap = value;
 
         if (value) {
             value.cleanupAnimatedProperties();
@@ -59,7 +44,25 @@ export class AnimationDocument extends SingleBoardDocument {
 
     clone(newId?: boolean): AnimationDocument {
         const clone = super.clone(newId) as AnimationDocument;
-        clone._animation = this._animation?.clone(clone);
+        clone._animationMap = this._animationMap?.clone(clone);
         return clone;
+    }
+
+    toJSON() {
+        const json = super.toJSON();
+        json.animationMap = this._animationMap;
+        return json;
+    }
+
+    static fromJSON(json, project: AnimationProject): AnimationDocument {
+        const document = new this(null, json.id);
+
+        document.applyJSON(json);
+
+        if (json.animationMap) {
+            document._animationMap = DocumentAnimationMap.create(document, project, json.animationMap);
+        }
+
+        return document;
     }
 }

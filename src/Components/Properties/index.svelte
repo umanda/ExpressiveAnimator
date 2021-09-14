@@ -21,6 +21,7 @@
     import {onDestroy, tick} from "svelte";
     import {PropertyUpdater} from "./PropertyUpdater";
     import type {ActionInfo, PropertyInfo} from "./PropertyUpdater";
+    import GlobalCoords from "./GlobalCoords.svelte";
 
     let globalProperties: GlobalElementProperties;
     $: globalProperties = $CurrentProject.engine?.globalElementProperties;
@@ -61,11 +62,19 @@
         updater.updateDocumentProperty(e.detail);
     }
 
+    function onDocumentAction(e: CustomEvent<any>) {
+        updater.callDocumentAction(e.detail);
+    }
+
     let isShapeTool: boolean = false;
 
     async function checkIfShape(tool: Tool) {
         await tick();
         isShapeTool = tool instanceof ShapeBuilderTool;
+    }
+
+    function propertiesVisibleForTool(tool: string, type: string): boolean {
+        return tool === type || (tool === 'pen' && (type === 'path' || type === 'clip-path'));
     }
 
     $: checkIfShape($CurrentTool);
@@ -83,10 +92,10 @@
         return true;
     }
 </script>
-<sp-tabs selected="{tab}" compact on:change|self={onTabChange}>
+<sp-tabs on:focusin selected="{tab}" compact on:change|self={onTabChange}>
     <sp-tab label="Appearance" value="appearance"></sp-tab>
     <sp-tab label="Properties" value="properties"></sp-tab>
-    <sp-tab label="Effects" value="effects" disabled></sp-tab>
+<!--    <sp-tab label="Effects" value="effects" disabled></sp-tab>-->
     <sp-tab-panel value="appearance" class="scroll" hidden-x>
         {#if tab === 'appearance'}
             {#if $CurrentSelectedElement == null}
@@ -137,12 +146,18 @@
                     />
                 {:else if $CurrentDocument}
                     <DocumentProps value={$CurrentDocument} on:update={onDocumentProperty}
+                                   on:action={onDocumentAction}
                                    bind:proportionalSize={$ProportionalSize} unit={$CurrentNumberUnit}
                                    readonly={$IsPlaying}
                     />
                 {/if}
             {:else}
-                {#if isShapeTool && $CurrentSelectedElement.type !== $CurrentTool.name}
+                <GlobalCoords on:action={onDocumentAction}
+                              on:end={onEnd}
+                              element={$CurrentSelectedElement}
+                              bind:proportionalSize={$ProportionalSize}
+                              readonly={$IsPlaying} />
+                {#if isShapeTool && !propertiesVisibleForTool($CurrentTool.name, $CurrentSelectedElement.type)}
                     <ElementProps
                             on:action={onGlobalPropertiesAction} on:update={onGlobalPropertiesUpdate}
                             value={globalProperties.getSpecificElementProperties($CurrentTool.name)}
@@ -168,7 +183,7 @@
             {/if}
         {/if}
     </sp-tab-panel>
-    <sp-tab-panel value="effects" class="scroll" hidden-x></sp-tab-panel>
+<!--    <sp-tab-panel value="effects" class="scroll" hidden-x></sp-tab-panel>-->
 </sp-tabs>
 <style>
     sp-tabs {

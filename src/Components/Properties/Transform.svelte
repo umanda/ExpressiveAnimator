@@ -1,7 +1,7 @@
 <script lang="ts">
-    import type {Element, AxisPointPosition, PointStruct} from "@zindex/canvas-engine";
+    import type {AxisPointPosition, Element, PointStruct} from "@zindex/canvas-engine";
+    import {Orientation, Point} from "@zindex/canvas-engine";
     import type {AnimationProject} from "../../Core";
-    import {Point, Orientation} from "@zindex/canvas-engine";
     import NumberPair from "./NumberPair.svelte";
     import PropertyGroup from "./PropertyGroup.svelte";
     import SidePosition from "./SidePosition.svelte";
@@ -34,6 +34,22 @@
 
     function onUpdate(property: string, value: any) {
         dispatch('update', {property, value});
+    }
+
+    function updateOrientation() {
+        let value = element.orientation;
+        switch (value) {
+            case Orientation.None:
+                value = Orientation.Auto;
+                break;
+            case Orientation.Auto:
+                value = Orientation.AutoReverse;
+                break;
+            default:
+                value = Orientation.None;
+                break
+        }
+        onUpdate('orientation', value)
     }
 
     let currentSkew: 'skewAngle' | 'skewAxis' = 'skewAngle';
@@ -109,10 +125,12 @@
         >
             <sp-action-button
                     disabled={disabled || readonly}
-                    title="Auto rotate"
-                    on:click={() => onUpdate('orientation', element.orientation === Orientation.None ? Orientation.Auto : Orientation.None)}
+                    title="{!element || element.orientation === Orientation.None ? 'No auto rotate' : (element.orientation === Orientation.Auto ? 'Auto rotate' : 'Auto rotate reverse')}"
+                    on:click={updateOrientation}
                     size="s" emphasized quiet selected={element && (element.orientation !== Orientation.None)}>
-                <sp-icon slot="icon" name='expr:rotate' size="s"></sp-icon>
+                <sp-icon slot="icon"
+                         size="s"
+                         name="expr:{!element || element.orientation === Orientation.None ? 'no-auto-rotate' : (element.orientation === Orientation.Auto ? 'auto-rotate' : 'auto-rotate-reverse')}"></sp-icon>
             </sp-action-button>
         </NumberPair>
     </PropertyItem>
@@ -122,7 +140,7 @@
                     on:input={e => onUpdate('scale', Point.fromObject(e.detail))}
                     disabled={disabled}
                     readonly={readonly}
-                    proportions={proportionalScale}
+                    bind:proportions={proportionalScale}
                     showProportionsIcon
                     properties={properties.scale}
                     value={element?.scale}

@@ -5,7 +5,7 @@
     import type {AnimationDocument} from "../../Core";
     import PropertyItem from "./PropertyItem.svelte";
     import SpTextField from "../../Controls/SpTextField.svelte";
-    import type {Size} from "@zindex/canvas-engine";
+    import type {Size, Grid2D, PointStruct} from "@zindex/canvas-engine";
     import {Rectangle} from "@zindex/canvas-engine";
     import SpNumberField from "../../Controls/SpNumberField.svelte";
 
@@ -26,11 +26,31 @@
         size = null;
     }
 
+    let grid: Grid2D;
+    $: grid = value?.grid as Grid2D;
+
+    let gridSize: PointStruct = null;
+
+    function onGridSizeDone() {
+        if (!gridSize || (gridSize.x === grid.horizontalSubdivisions && gridSize.y === grid.verticalSubdivisions)) {
+            return;
+        }
+        grid.horizontalSubdivisions = gridSize.x;
+        grid.verticalSubdivisions = gridSize.y;
+        gridSize = null;
+
+        dispatch('action', () => true);
+    }
+
     let properties = {
         size: {
             x: {label: 'width', format: 'decimal', decimals: 0, step: 1, min: 0},
             y: {label: 'height', format: 'decimal', decimals: 0, step: 1, min: 0},
-        }
+        },
+        grid: {
+            x: {label: 'x', format: 'decimal', decimals: 0, step: 1, min: 1, max: 30},
+            y: {label: 'y', format: 'decimal', decimals: 0, step: 1, min: 1, max: 30},
+        },
     };
 
     $: properties.size.x.format = properties.size.y.format = unit;
@@ -60,11 +80,23 @@
                     on:input={e => size = {width: e.detail.x, height: e.detail.y}}
                     readonly={readonly}
                     properties={properties.size}
-                    proportions={proportionalSize}
+                    bind:proportions={proportionalSize}
                     showProportionsIcon
                     value={{x: value.board.width, y: value.board.height}} />
     </PropertyItem>
 </PropertyGroup>
+{#if grid}
+    <PropertyGroup title="Grid">
+        <PropertyItem title="Division">
+            <NumberPair on:end={onGridSizeDone}
+                        on:start={() => gridSize = {x: grid.horizontalSubdivisions, y: grid.verticalSubdivisions}}
+                        on:input={e => gridSize = e.detail}
+                        readonly={readonly}
+                        properties={properties.grid}
+                        value={{x: grid.horizontalSubdivisions, y: grid.verticalSubdivisions}} />
+        </PropertyItem>
+    </PropertyGroup>
+{/if}
 {#if value.animation}
     <PropertyGroup title="Animation">
         <PropertyItem title="Duration">

@@ -27,7 +27,7 @@ export const MaskAnimators: ElementAnimatorMap<AnimatedMaskElement> = {
         title: 'Time',
         type: 'mask',
         create() {
-            return new PositiveNumberAnimation();
+            return new PositiveNumberAnimation('time', 'mask');
         }
     }
 }

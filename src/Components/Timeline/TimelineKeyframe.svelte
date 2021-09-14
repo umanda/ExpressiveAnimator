@@ -15,17 +15,17 @@
         height: var(--timeline-keyframe-size);
         border-radius: 50%;
         border: 1px solid var(--spectrum-global-color-gray-100);
-        background: var(--spectrum-global-color-gray-800);
+        background: var(--spectrum-global-color-gray-700);
     }
 
     .timeline-keyframe:hover:not(.is-selected) {
         z-index: 7;
-        border-color: var(--spectrum-semantic-cta-color-background-default);
-        box-shadow: 0 0 4px var(--spectrum-semantic-cta-color-background-default);
+        border-color: var(--spectrum-global-color-blue-500);
+        box-shadow: 0 0 4px var(--spectrum-global-color-blue-500);
     }
 
     .timeline-keyframe.is-selected {
         z-index: 7;
-        background: var(--spectrum-semantic-cta-color-background-default);
+        background: var(--spectrum-global-color-blue-500);
     }
 </style>

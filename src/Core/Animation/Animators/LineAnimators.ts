@@ -26,7 +26,7 @@ export const LineAnimators: ElementAnimatorMap<LineElement> = {
         title: 'Line Points',
         type: 'line',
         create() {
-            return new LineAnimation();
+            return new LineAnimation('points', 'line');
         }
     }
 }

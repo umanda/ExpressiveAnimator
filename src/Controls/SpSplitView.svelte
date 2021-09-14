@@ -1,15 +1,32 @@
 <svelte:options immutable={true} />
 <script lang="ts">
-    import {tick} from "svelte";
+    import {tick, createEventDispatcher} from "svelte";
+
+    const dispatch = createEventDispatcher();
 
     let collapsedEnd: boolean = false;
     let collapsedStart: boolean = false;
+
+    let addedSplitterHandler: boolean = false;
+    let view: HTMLElement;
+
+    function onSplitterPointerUp(e: PointerEvent) {
+        addedSplitterHandler = false;
+        (e.target as HTMLElement).removeEventListener('pointerup', onSplitterPointerUp);
+        const percent = Math.round(100 * (view.firstElementChild as HTMLElement).offsetHeight / view.offsetHeight);
+        dispatch('resized', percent);
+    }
 
     async function fixSplitter(e) {
         await tick();
         const splitter = (e.target as {splitter: HTMLElement}).splitter;
         if (!splitter) {
             return;
+        }
+
+        if (!addedSplitterHandler) {
+            splitter.addEventListener('pointerup', onSplitterPointerUp);
+            addedSplitterHandler = true;
         }
 
         collapsedStart = splitter.classList.contains('is-collapsed-start');
@@ -20,6 +37,7 @@
 </script>
 <sp-split-view
         {...$$restProps}
+        bind:this={view}
         on:change={fixSplitter}
         class:is-collapsed={collapsedEnd || collapsedStart}>
     <slot collapsed={collapsedStart} name="primary" />

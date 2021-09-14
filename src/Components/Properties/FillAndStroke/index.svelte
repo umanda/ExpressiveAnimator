@@ -4,9 +4,10 @@
     import Fill from "./Fill.svelte";
     import Stroke from "./Stroke.svelte";
     import type {Brush, FillRule, StrokeLineCap, StrokeLineJoin, Rectangle} from "@zindex/canvas-engine";
-    import {BrushType, VectorElement} from "@zindex/canvas-engine";
+    import {BrushType, GradientBrush, VectorElement} from "@zindex/canvas-engine";
     import {createEventDispatcher} from "svelte";
-    import {AnimationProject} from "../../../Core";
+    import type {AnimationProject} from "../../../Core";
+    import {IsGradientPinned} from "../../../Stores";
 
     const dispatch = createEventDispatcher();
 
@@ -57,28 +58,49 @@
         });
     }
 
+    function handleGradientUpdate(project: AnimationProject, value: Brush, property: string, filter): boolean {
+        if (!(value instanceof GradientBrush)) {
+            return project.middleware.setElementsProperty(
+                project.selection,
+                property as any,
+                value,
+                filter
+            );
+        }
+
+        return project.middleware.setGradientBrushRelativeToElement(
+            project.selection.activeElement as any,
+            value,
+            project.selection.vectorElements(),
+            property === 'fill',
+            !$IsGradientPinned
+        );
+    }
+
     function onStart() {
         dispatch('start', {property: brushProperty, value: value[brushProperty]});
     }
 
     function onUpdate(e: CustomEvent<Brush>) {
-        dispatch('update', {property: brushProperty, value: e.detail});
+        dispatch('update', {property: brushProperty, value: e.detail, update: handleGradientUpdate});
     }
 
+    /*
+    <BrushControl on:action={onAction} />
     function onAction(e) {
         dispatch('action', {
             action: e.detail.action,
             type: e.detail.type,
             value: {property: brushProperty, value: e.detail.value},
         });
-    }
+    }*/
 </script>
 <div class="fill-stroke-brush">
     <BrushSwitch on:start on:end on:update on:action value={value} bind:showFill readonly={readonly} />
-    <BrushControl on:change={onBrushTypeChange} on:start={onStart} on:end on:update={onUpdate} on:action={onAction}
+    <BrushControl on:change={onBrushTypeChange} on:start={onStart} on:end on:update={onUpdate}
                   value={showFill ? value.fill : value.strokeBrush} readonly={readonly} bounds={value.localBounds} />
 </div>
-<Stroke on:start on:end on:update on:action value={value} unit={unit} dashesPercent={dashesPercent} readonly={readonly} />
+<Stroke on:start on:end on:update on:action value={value} unit={unit} bind:dashesPercent={dashesPercent} readonly={readonly} />
 <Fill on:start on:end on:update on:action value={value} readonly={readonly} />
 <style>
     .fill-stroke-brush {
