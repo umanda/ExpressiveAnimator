@@ -667,6 +667,12 @@ export async function showNewProjectDialog(current: AnimationProject = Project) 
         await showSaveAlert(current);
     }
 
+    const deferPrompt = window['expressiveBeforeInstallPrompt'];
+    let pwa = !window.matchMedia('(display-mode: standalone)').matches;
+    if (pwa) {
+        pwa = !!deferPrompt;
+    }
+
     await showDialog('new-project', {
         title: '',
         dismissable: true,
@@ -675,9 +681,9 @@ export async function showNewProjectDialog(current: AnimationProject = Project) 
         responsive: true,
         autofocus: false,
     }, {
-        pwa: !window.matchMedia('(display-mode: standalone)').matches,
+        pwa,
         recent: await readRecentProjectEntries(),
-        deferPrompt: window['expressiveBeforeInstallPrompt']
+        deferPrompt
     });
 }
 
